@@ -1,0 +1,1 @@
+- sempre que for usar o supabase use o mcp do supabase
