@@ -1,12 +1,24 @@
+"use client"
+
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Scissors, Clock, MapPin, Phone, Star } from "lucide-react"
 import { mockStores, mockServices, mockBarbers } from "@/lib/mock-data"
+import { CustomerHeader } from "@/components/customer-header"
+import { CustomerLogin } from "@/components/customer-login"
+import { CustomerRecommendations } from "@/components/customer-recommendations"
+import { useEffect, useState } from "react"
 
 export default function HomePage() {
   const featuredStore = mockStores[0]
   const featuredServices = mockServices.slice(0, 3)
+  const [customerId, setCustomerId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCustomerId(localStorage.getItem("customerId"))
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,21 +27,21 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              <Scissors className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-              <h1 className="text-lg md:text-2xl font-bold text-foreground">GoBarber</h1>
-            </div>
-            <div className="flex items-center gap-2 md:gap-4">
-              <Link href="/login">
-                <Button variant="ghost" size="sm" className="text-xs md:text-sm whitespace-nowrap">
-                  Login
-                </Button>
+              <Link href="/" className="block">
+                  <img
+                    src="/logo-min.svg"
+                    alt="GoBarber"
+                    className="block md:hidden h-auto w-auto max-h-14"
+                  />
+
+                  <img
+                    src="/logo.svg"
+                    alt="GoBarber"
+                    className="hidden md:block h-auto w-auto max-h-20 md:max-h-24 lg:max-h-28"
+                  />
               </Link>
-              <Link href="/customer/services">
-                <Button size="sm" className="text-xs md:text-sm whitespace-nowrap">
-                  Agendar
-                </Button>
-              </Link>
             </div>
+            <CustomerHeader customerId={customerId} />
           </div>
         </div>
       </header>
@@ -49,6 +61,23 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* Customer Section - Login or Recommendations */}
+      {!customerId ? (
+        <section className="py-16 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="max-w-md mx-auto">
+              <CustomerLogin onSuccess={() => setCustomerId(localStorage.getItem("customerId"))} />
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="py-16 bg-card">
+          <div className="container mx-auto px-4">
+            <CustomerRecommendations customerId={customerId} variant="full" />
+          </div>
+        </section>
+      )}
 
       {/* Featured Services */}
       <section className="py-16 bg-background">

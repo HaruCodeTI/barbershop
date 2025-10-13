@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
-import { ArrowLeft, Clock, User, Check, Star } from "lucide-react"
+import { ArrowLeft, Clock, User, Check, Star, Edit } from "lucide-react"
 import { generateStaticTimeSlots } from "@/lib/mock-data"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ptBR } from "date-fns/locale"
 import { createClient } from "@/lib/supabase/client"
 import { createAppointment } from "@/lib/appointments"
+import { updateAppointment } from "@/lib/customer"
 
 interface Service {
   id: string
@@ -44,9 +45,18 @@ function DateTimeContent() {
   const customerId = searchParams.get("customerId")
   const couponCode = searchParams.get("coupon")
 
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [selectedBarber, setSelectedBarber] = useState<string>("")
+  // Edit mode
+  const isEditMode = searchParams.get("editMode") === "true"
+  const appointmentId = searchParams.get("appointmentId")
+  const editBarberId = searchParams.get("barberId")
+  const editDate = searchParams.get("date")
+  const editTime = searchParams.get("time")
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    editDate ? new Date(editDate) : new Date(),
+  )
+  const [selectedTime, setSelectedTime] = useState<string>(editTime || "")
+  const [selectedBarber, setSelectedBarber] = useState<string>(editBarberId || "")
 
   const [services, setServices] = useState<Service[]>([])
   const [barbers, setBarbers] = useState<Barber[]>([])
@@ -140,11 +150,36 @@ function DateTimeContent() {
     }
 
     setError("")
+    setCreating(true)
 
-    // If customer is already identified, create appointment directly
-    if (customerId) {
-      setCreating(true)
-      try {
+    try {
+      // Edit mode - update existing appointment
+      if (isEditMode && appointmentId) {
+        const dateStr = selectedDate.toISOString().split("T")[0]
+
+        // Calculate new prices
+        const totalPrice = services.reduce((sum, s) => sum + Number(s.price), 0)
+
+        const result = await updateAppointment(appointmentId, {
+          appointment_date: dateStr,
+          appointment_time: selectedTime,
+          barber_id: selectedBarber,
+          service_ids: serviceIds,
+          total_price: totalPrice,
+          discount_amount: 0,
+          final_price: totalPrice,
+        })
+
+        if (result.success) {
+          // Add updated parameter to trigger reload and show success message
+          router.push("/customer/appointments?updated=true")
+        } else {
+          setError(result.error || "Erro ao atualizar agendamento")
+          setCreating(false)
+        }
+      }
+      // Create new appointment
+      else if (customerId) {
         const result = await createAppointment({
           customerId,
           barberId: selectedBarber,
@@ -161,20 +196,21 @@ function DateTimeContent() {
           setError(result.error || "Erro ao criar agendamento")
           setCreating(false)
         }
-      } catch (err) {
-        setError("Erro inesperado ao criar agendamento")
+      } else {
+        // No customer identified, go to signup
+        const params = new URLSearchParams({
+          services: serviceIds.join(","),
+          date: selectedDate.toISOString(),
+          time: selectedTime,
+          barber: selectedBarber,
+          ...(couponCode && { coupon: couponCode }),
+        })
+        router.push(`/customer/signup?${params}`)
         setCreating(false)
       }
-    } else {
-      // No customer identified, go to signup
-      const params = new URLSearchParams({
-        services: serviceIds.join(","),
-        date: selectedDate.toISOString(),
-        time: selectedTime,
-        barber: selectedBarber,
-        ...(couponCode && { coupon: couponCode }),
-      })
-      router.push(`/customer/signup?${params}`)
+    } catch (err) {
+      setError(isEditMode ? "Erro inesperado ao atualizar agendamento" : "Erro inesperado ao criar agendamento")
+      setCreating(false)
     }
   }
 
@@ -211,14 +247,34 @@ function DateTimeContent() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Selecionar Data e Hora</h1>
-              <p className="text-sm text-muted-foreground">Passo 2 de 4</p>
+              <h1 className="text-xl font-bold text-foreground">
+                {isEditMode ? "Editar Data e Hora" : "Selecionar Data e Hora"}
+              </h1>
+              <p className="text-sm text-muted-foreground">{isEditMode ? "Atualizar agendamento" : "Passo 2 de 4"}</p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {isEditMode && (
+          <Card className="mb-8 border-blue-500/50 bg-blue-500/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20">
+                  <Edit className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Editando Agendamento</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Selecione a nova data, horário e barbeiro para seu agendamento
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             {/* Barber Selection */}
@@ -476,7 +532,25 @@ function DateTimeContent() {
                   onClick={handleContinue}
                   disabled={!isComplete || creating}
                 >
-                  {creating ? "Criando agendamento..." : customerId ? "Finalizar Agendamento" : "Continuar para Cadastro"}
+                  {creating ? (
+                    isEditMode ? (
+                      <>
+                        <Edit className="h-4 w-4 mr-2 animate-pulse" />
+                        Atualizando...
+                      </>
+                    ) : (
+                      "Criando agendamento..."
+                    )
+                  ) : isEditMode ? (
+                    <>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Atualizar Agendamento
+                    </>
+                  ) : customerId ? (
+                    "Finalizar Agendamento"
+                  ) : (
+                    "Continuar para Cadastro"
+                  )}
                 </Button>
               </CardContent>
             </Card>

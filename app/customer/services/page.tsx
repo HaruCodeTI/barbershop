@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Scissors, Clock, ArrowLeft, Ticket, User, Star, TrendingUp } from "lucide-react"
+import { Scissors, Clock, ArrowLeft, Ticket, User, Star, TrendingUp, Edit } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,6 +56,10 @@ export default function ServiceSelectionPage() {
   const [loading, setLoading] = useState(true)
   const [favoriteServices, setFavoriteServices] = useState<string[]>([])
 
+  // Edit mode state
+  const isEditMode = searchParams.get("editMode") === "true"
+  const appointmentId = searchParams.get("appointmentId")
+
   useEffect(() => {
     async function fetchServices() {
       const supabase = createClient()
@@ -73,6 +77,65 @@ export default function ServiceSelectionPage() {
 
     fetchServices()
   }, [])
+
+  // Check if customer is already logged in from localStorage
+  useEffect(() => {
+    async function checkExistingCustomer() {
+      const existingCustomerId = typeof window !== "undefined" ? localStorage.getItem("customerId") : null
+
+      if (!existingCustomerId) {
+        return
+      }
+
+      const supabase = createClient()
+      const { data: customer, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", existingCustomerId)
+        .single()
+
+      if (error || !customer) {
+        // Customer not found or error, clear localStorage
+        localStorage.removeItem("customerId")
+        localStorage.removeItem("customerName")
+        localStorage.removeItem("customerPhone")
+        return
+      }
+
+      setCustomerData(customer)
+      setShowCustomerLogin(false)
+
+      // Fetch customer's favorite services (most booked)
+      const { data: appointments } = await supabase
+        .from("appointments")
+        .select("appointment_services(service_id)")
+        .eq("customer_id", customer.id)
+        .eq("status", "completed")
+        .limit(10)
+
+      if (appointments) {
+        const serviceIds = appointments.flatMap((apt: any) => apt.appointment_services.map((as: any) => as.service_id))
+        const uniqueServices = [...new Set(serviceIds)]
+        setFavoriteServices(uniqueServices.slice(0, 3))
+        // Only auto-select services if NOT in edit mode
+        if (!isEditMode) {
+          setSelectedServices(uniqueServices.slice(0, 2))
+        }
+      }
+    }
+
+    checkExistingCustomer()
+  }, [isEditMode])
+
+  // Load appointment data in edit mode
+  useEffect(() => {
+    if (isEditMode) {
+      const serviceIds = searchParams.get("services")
+      if (serviceIds) {
+        setSelectedServices(serviceIds.split(","))
+      }
+    }
+  }, [isEditMode, searchParams])
 
   const handleCustomerLogin = async () => {
     setPhoneError("")
@@ -183,6 +246,11 @@ export default function ServiceSelectionPage() {
         services: selectedServices.join(","),
         ...(appliedCoupon && { coupon: appliedCoupon.code }),
         ...(customerData && { customerId: customerData.id }),
+        ...(isEditMode && appointmentId && { editMode: "true", appointmentId }),
+        ...(isEditMode && {
+          barberId: searchParams.get("barberId") || "",
+          storeId: searchParams.get("storeId") || "",
+        }),
       })
       router.push(`/customer/datetime?${params}`)
     }
@@ -229,7 +297,25 @@ export default function ServiceSelectionPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {showCustomerLogin && (
+        {isEditMode && (
+          <Card className="mb-8 border-blue-500/50 bg-blue-500/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20">
+                  <Edit className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Editando Agendamento</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Você pode alterar os serviços, data e hora do seu agendamento
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {showCustomerLogin && !isEditMode && (
           <Card className="mb-8 border-primary/50">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -446,7 +532,14 @@ export default function ServiceSelectionPage() {
                       </div>
                     </div>
                     <Button className="w-full" size="lg" onClick={handleContinue}>
-                      Continuar para Data e Hora
+                      {isEditMode ? (
+                        <>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Atualizar Agendamento
+                        </>
+                      ) : (
+                        "Continuar para Data e Hora"
+                      )}
                     </Button>
                   </>
                 )}
