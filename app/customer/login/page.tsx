@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/contexts/auth-context"
 import { useStore } from "@/lib/contexts/store-context"
 import { toast } from "sonner"
 
-export default function CustomerLoginPage() {
+function CustomerLoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { customerSignIn, loading: authLoading } = useAuth()
@@ -147,5 +147,17 @@ export default function CustomerLoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function CustomerLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <CustomerLoginForm />
+    </Suspense>
   )
 }

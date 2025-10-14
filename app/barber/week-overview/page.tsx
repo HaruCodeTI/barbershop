@@ -8,11 +8,16 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-
 import { getWeekOverview, type WeekOverview } from "@/lib/barber"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-
-// TODO: Get from auth
-const BARBER_ID = "d6f5e4d3-c2b1-4a09-8f7e-6d5c4b3a2910"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { StaffUser } from "@/lib/auth"
+import { StaffHeader } from "@/components/staff-header"
+import { useRouter } from "next/navigation"
 
 export default function BarberWeekOverviewPage() {
+  const router = useRouter()
+  const { user, userType, loading: authLoading } = useAuth()
+  const staff = user && userType === "staff" ? (user as StaffUser) : null
+  const barberId = staff?.id || null
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date()
     const day = today.getDay()
@@ -25,14 +30,17 @@ export default function BarberWeekOverviewPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadWeekOverview()
-  }, [currentWeekStart])
+    if (barberId) {
+      loadWeekOverview()
+    }
+  }, [currentWeekStart, barberId])
 
   const loadWeekOverview = async () => {
+    if (!barberId) return
     setLoading(true)
     setError(null)
     const weekStartStr = currentWeekStart.toISOString().split("T")[0]
-    const result = await getWeekOverview(BARBER_ID, weekStartStr)
+    const result = await getWeekOverview(barberId, weekStartStr)
 
     if (result.success && result.overview) {
       setOverview(result.overview)
@@ -62,6 +70,21 @@ export default function BarberWeekOverviewPage() {
     return `${hour.toString().padStart(2, "0")}:${minute}`
   })
 
+  // Check auth and redirect if not barber
+  useEffect(() => {
+    if (!authLoading && (!staff || staff.role !== "barber")) {
+      router.push("/login")
+    }
+  }, [authLoading, staff, router])
+
+  if (authLoading || !staff) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
@@ -78,11 +101,20 @@ export default function BarberWeekOverviewPage() {
                 <p className="text-sm text-muted-foreground">Seus agendamentos da semana</p>
               </div>
             </div>
-            <Link href="/barber/time-blocking" className="cursor-pointer">
-              <Button variant="outline" className="bg-transparent cursor-pointer">
-                Gerenciar Disponibilidade
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/barber/time-blocking" className="cursor-pointer">
+                <Button variant="outline" className="bg-transparent cursor-pointer">
+                  Gerenciar Disponibilidade
+                </Button>
+              </Link>
+              {staff && (
+                <StaffHeader
+                  staffName={staff.name}
+                  staffRole={staff.role as "manager" | "barber" | "attendant"}
+                  avatarUrl={staff.avatar_url}
+                />
+              )}
+            </div>
           </div>
         </div>
       </header>

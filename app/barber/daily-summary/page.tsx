@@ -18,11 +18,16 @@ import {
 import { getDailySummary, completeAppointment, type DailySummary } from "@/lib/barber"
 import Link from "next/link"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const BARBER_ID = "d6f5e4d3-c2b1-4a09-8f7e-6d5c4b3a2910"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { StaffUser } from "@/lib/auth"
+import { StaffHeader } from "@/components/staff-header"
+import { useRouter } from "next/navigation"
 
 export default function BarberDailySummaryPage() {
+  const router = useRouter()
+  const { user, userType, loading: authLoading } = useAuth()
+  const staff = user && userType === "staff" ? (user as StaffUser) : null
+  const barberId = staff?.id || null
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [summary, setSummary] = useState<DailySummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -30,14 +35,17 @@ export default function BarberDailySummaryPage() {
   const [updatingAppointment, setUpdatingAppointment] = useState<string | null>(null)
 
   useEffect(() => {
-    loadSummary()
-  }, [selectedDate])
+    if (barberId) {
+      loadSummary()
+    }
+  }, [selectedDate, barberId])
 
   const loadSummary = async () => {
+    if (!barberId) return
     setLoading(true)
     setError(null)
     const dateStr = selectedDate.toISOString().split("T")[0]
-    const result = await getDailySummary(BARBER_ID, dateStr)
+    const result = await getDailySummary(barberId, dateStr)
 
     if (result.success && result.summary) {
       setSummary(result.summary)
@@ -82,6 +90,21 @@ export default function BarberDailySummaryPage() {
     no_show: "Não Compareceu",
   }
 
+  // Check auth and redirect if not barber
+  useEffect(() => {
+    if (!authLoading && (!staff || staff.role !== "barber")) {
+      router.push("/login")
+    }
+  }, [authLoading, staff, router])
+
+  if (authLoading || !staff) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
@@ -104,6 +127,13 @@ export default function BarberDailySummaryPage() {
                   Visão Semanal
                 </Button>
               </Link>
+              {staff && (
+                <StaffHeader
+                  staffName={staff.name}
+                  staffRole={staff.role as "manager" | "barber" | "attendant"}
+                  avatarUrl={staff.avatar_url}
+                />
+              )}
             </div>
           </div>
         </div>

@@ -44,6 +44,13 @@ export default function LoginPage() {
 
       console.log("[Login] API result:", result)
 
+      // Check if staff needs to set up password (first access)
+      if (result.requiresPasswordSetup && result.staffId) {
+        console.log("[Login] First access detected, redirecting to setup password")
+        window.location.href = `/setup-password?id=${result.staffId}&email=${encodeURIComponent(email)}`
+        return
+      }
+
       if (!result.success || !result.staff) {
         throw new Error(result.error || "Erro ao fazer login")
       }

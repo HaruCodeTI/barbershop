@@ -10,15 +10,16 @@
  *   "crons": [
  *     {
  *       "path": "/api/cron/send-reminders?type=email",
- *       "schedule": "0 * * * *"
+ *       "schedule": "0 asterisk asterisk asterisk asterisk"
  *     },
  *     {
  *       "path": "/api/cron/send-reminders?type=sms",
- *       "schedule": "*/15 * * * *"
+ *       "schedule": "asterisk/15 asterisk asterisk asterisk asterisk"
  *     }
  *   ]
  * }
  *
+ * Note: Replace 'asterisk' with the actual asterisk symbol (*) in vercel.json
  * Or use external cron service (cron-job.org, GitHub Actions, etc.)
  */
 

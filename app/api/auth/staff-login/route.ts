@@ -18,7 +18,17 @@ export async function POST(request: NextRequest) {
     // Call staffSignIn (bcrypt works fine on server-side)
     const result = await staffSignIn(email, password)
 
-    console.log("[API] Login result:", { success: result.success, hasStaff: !!result.staff })
+    console.log("[API] Login result:", { success: result.success, hasStaff: !!result.staff, requiresPasswordSetup: result.requiresPasswordSetup })
+
+    // Check if staff needs to set up password
+    if (result.requiresPasswordSetup) {
+      return NextResponse.json({
+        success: false,
+        requiresPasswordSetup: true,
+        staffId: result.staffId,
+        error: result.error,
+      })
+    }
 
     if (!result.success) {
       return NextResponse.json(

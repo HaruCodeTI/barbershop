@@ -2,24 +2,29 @@
 
 import type React from "react"
 
-import { useState, Suspense, useEffect } from "react"
+import { useState, Suspense, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, User, Mail, Phone, Clock, DollarSign, Loader2, Search } from "lucide-react"
+import { ArrowLeft, User, Mail, Phone, Clock, DollarSign, Loader2, Search, CheckSquare, Square } from "lucide-react"
 import { createBooking, searchCustomer } from "@/lib/attendant"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { toast } from "sonner"
 import { useStore } from "@/lib/hooks/use-store"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { StaffUser } from "@/lib/auth"
+import { StaffHeader } from "@/components/staff-header"
+import { LoadingPage, LoadingCard } from "@/components/loading-state"
 
 function CreateBookingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, userType, loading: authLoading } = useAuth()
+  const staff = user && userType === "staff" ? (user as StaffUser) : null
   const { store, loading: storeLoading } = useStore()
 
   const preselectedBarber = searchParams.get("barber") || ""
@@ -44,12 +49,7 @@ function CreateBookingContent() {
   const [barbers, setBarbers] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
 
-  useEffect(() => {
-    loadBarbers()
-    loadServices()
-  }, [])
-
-  const loadBarbers = async () => {
+  const loadBarbers = useCallback(async () => {
     if (!store) return
     const supabase = createClient()
     const { data } = await supabase
@@ -60,9 +60,9 @@ function CreateBookingContent() {
       .order("name")
 
     if (data) setBarbers(data)
-  }
+  }, [store])
 
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     if (!store) return
     const supabase = createClient()
     const { data } = await supabase
@@ -73,7 +73,21 @@ function CreateBookingContent() {
       .order("name")
 
     if (data) setServices(data)
-  }
+  }, [store])
+
+  useEffect(() => {
+    if (store) {
+      loadBarbers()
+      loadServices()
+    }
+  }, [store, loadBarbers, loadServices])
+
+  // Check auth and redirect if not attendant
+  useEffect(() => {
+    if (!authLoading && (!staff || staff.role !== "attendant")) {
+      router.push("/login")
+    }
+  }, [authLoading, staff, router])
 
   const handleSearchCustomer = async () => {
     if (!formData.customerPhone || formData.customerPhone.length < 10) {
@@ -174,12 +188,8 @@ function CreateBookingContent() {
     }
   }
 
-  if (storeLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+  if (authLoading || storeLoading) {
+    return <LoadingPage />
   }
 
   if (!store) {
@@ -201,34 +211,45 @@ function CreateBookingContent() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/attendant/availability" className="cursor-pointer">
-              <Button variant="ghost" size="icon" className="cursor-pointer">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Criar Novo Agendamento</h1>
-              <p className="text-sm text-muted-foreground">Preencha os detalhes para criar um agendamento</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <Link href="/attendant/availability" className="cursor-pointer flex-shrink-0">
+                <Button variant="ghost" size="icon" className="cursor-pointer">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Criar Novo Agendamento</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Preencha os detalhes para criar um agendamento</p>
+              </div>
             </div>
+            {staff && (
+              <div className="flex-shrink-0">
+                <StaffHeader
+                  staffName={staff.name}
+                  staffRole={staff.role as "manager" | "barber" | "attendant"}
+                  avatarUrl={staff.avatar_url}
+                />
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Customer Information */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Informações do Cliente</CardTitle>
-                  <CardDescription>Digite o telefone para buscar ou criar novo cliente</CardDescription>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Informações do Cliente</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Digite o telefone para buscar ou criar novo cliente</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="customerPhone">Telefone</Label>
-                    <div className="flex gap-2">
+                    <Label htmlFor="customerPhone" className="text-sm">Telefone</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <div className="relative flex-1">
                         <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -244,19 +265,20 @@ function CreateBookingContent() {
                         type="button"
                         onClick={handleSearchCustomer}
                         disabled={searchingCustomer}
-                        className="cursor-pointer"
+                        className="cursor-pointer w-full sm:w-auto"
+                        size="sm"
                       >
                         {searchingCustomer ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            <Search className="h-4 w-4 mr-2" />
-                            Buscar
+                            <Search className="h-4 w-4 sm:mr-2" />
+                            <span className="sm:inline">Buscar</span>
                           </>
                         )}
                       </Button>
                     </div>
-                    {errors.customerPhone && <p className="text-sm text-destructive">{errors.customerPhone}</p>}
+                    {errors.customerPhone && <p className="text-xs sm:text-sm text-destructive">{errors.customerPhone}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -294,9 +316,9 @@ function CreateBookingContent() {
 
               {/* Appointment Details */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Detalhes do Agendamento</CardTitle>
-                  <CardDescription>Selecione barbeiro, data e horário</CardDescription>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Detalhes do Agendamento</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Selecione barbeiro, data e horário</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -348,39 +370,34 @@ function CreateBookingContent() {
 
               {/* Services */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Selecionar Serviços</CardTitle>
-                  <CardDescription>Escolha um ou mais serviços</CardDescription>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Selecionar Serviços</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Escolha um ou mais serviços</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {services.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Carregando serviços...</p>
-                    </div>
+                    <LoadingCard message="Carregando serviços..." className="py-8" />
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {services.map((service) => (
                         <div
                           key={service.id}
-                          className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-all hover:scale-[1.02] cursor-pointer"
+                          className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg border hover:bg-accent/50 transition-all hover:scale-[1.02] cursor-pointer"
                           onClick={() => toggleService(service.id)}
                         >
-                          <Checkbox
-                            id={`service-${service.id}`}
-                            checked={formData.serviceIds.includes(service.id)}
-                            onCheckedChange={() => toggleService(service.id)}
-                            className="cursor-pointer"
-                          />
-                          <div className="flex-1">
-                            <label
-                              htmlFor={`service-${service.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                            >
+                          <div className="flex-shrink-0 mt-0.5">
+                            {formData.serviceIds.includes(service.id) ? (
+                              <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                            ) : (
+                              <Square className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-medium leading-none cursor-pointer">
                               {service.name}
-                            </label>
-                            <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+                            <div className="flex items-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 {service.duration} min
@@ -395,23 +412,23 @@ function CreateBookingContent() {
                       ))}
                     </div>
                   )}
-                  {errors.serviceIds && <p className="text-sm text-destructive mt-2">{errors.serviceIds}</p>}
+                  {errors.serviceIds && <p className="text-xs sm:text-sm text-destructive mt-2">{errors.serviceIds}</p>}
                 </CardContent>
               </Card>
 
               {/* Notes */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Observações Adicionais</CardTitle>
-                  <CardDescription>Solicitações especiais ou informações importantes</CardDescription>
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Observações Adicionais</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Solicitações especiais ou informações importantes</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Textarea
                     placeholder="Digite observações ou solicitações especiais..."
                     value={formData.notes}
                     onChange={(e) => handleChange("notes", e.target.value)}
-                    rows={4}
-                    className="cursor-text"
+                    rows={3}
+                    className="cursor-text text-sm"
                   />
                 </CardContent>
               </Card>
@@ -419,22 +436,22 @@ function CreateBookingContent() {
 
             {/* Summary Sidebar */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle>Resumo do Agendamento</CardTitle>
+              <Card className="lg:sticky lg:top-24">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Resumo do Agendamento</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 sm:space-y-4">
                   {formData.customerName && (
                     <div>
-                      <h4 className="text-sm font-semibold mb-1 text-foreground">Cliente</h4>
-                      <p className="text-sm text-muted-foreground">{formData.customerName}</p>
+                      <h4 className="text-xs sm:text-sm font-semibold mb-1 text-foreground">Cliente</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{formData.customerName}</p>
                     </div>
                   )}
 
                   {formData.barberId && (
                     <div>
-                      <h4 className="text-sm font-semibold mb-1 text-foreground">Barbeiro</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <h4 className="text-xs sm:text-sm font-semibold mb-1 text-foreground">Barbeiro</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         {barbers.find((b) => b.id === formData.barberId)?.name}
                       </p>
                     </div>
@@ -442,8 +459,8 @@ function CreateBookingContent() {
 
                   {formData.date && (
                     <div>
-                      <h4 className="text-sm font-semibold mb-1 text-foreground">Data & Horário</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <h4 className="text-xs sm:text-sm font-semibold mb-1 text-foreground">Data & Horário</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {new Date(formData.date).toLocaleDateString("pt-BR", {
                           weekday: "short",
                           day: "numeric",
@@ -456,12 +473,12 @@ function CreateBookingContent() {
 
                   {selectedServices.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-semibold mb-2 text-foreground">Serviços</h4>
+                      <h4 className="text-xs sm:text-sm font-semibold mb-2 text-foreground">Serviços</h4>
                       <div className="space-y-1">
                         {selectedServices.map((service) => (
-                          <div key={service.id} className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">{service.name}</span>
-                            <span className="text-foreground">R$ {Number(service.price).toFixed(2)}</span>
+                          <div key={service.id} className="flex justify-between text-xs sm:text-sm gap-2">
+                            <span className="text-muted-foreground truncate">{service.name}</span>
+                            <span className="text-foreground flex-shrink-0">R$ {Number(service.price).toFixed(2)}</span>
                           </div>
                         ))}
                       </div>
@@ -469,19 +486,19 @@ function CreateBookingContent() {
                   )}
 
                   {selectedServices.length > 0 && (
-                    <div className="border-t pt-4 space-y-2">
-                      <div className="flex justify-between text-sm">
+                    <div className="border-t pt-3 sm:pt-4 space-y-2">
+                      <div className="flex justify-between text-xs sm:text-sm">
                         <span className="text-muted-foreground">Duração</span>
                         <span className="font-medium">{totalDuration} min</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="font-semibold">Total</span>
-                        <span className="font-bold text-primary text-lg">R$ {totalPrice.toFixed(2)}</span>
+                        <span className="text-sm sm:text-base font-semibold">Total</span>
+                        <span className="font-bold text-primary text-base sm:text-lg">R$ {totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full cursor-pointer" size="lg" disabled={loading}>
+                  <Button type="submit" className="w-full cursor-pointer" size="default" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -503,7 +520,13 @@ function CreateBookingContent() {
 
 export default function CreateBookingPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <CreateBookingContent />
     </Suspense>
   )

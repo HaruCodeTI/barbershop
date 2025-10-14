@@ -21,6 +21,8 @@ export interface SignInResult {
   token?: string
   staff?: StaffUser
   error?: string
+  requiresPasswordSetup?: boolean
+  staffId?: string
 }
 
 export interface SignUpResult {
@@ -58,11 +60,13 @@ export async function staffSignIn(email: string, password: string): Promise<Sign
       }
     }
 
-    // 3. Verificar se tem senha cadastrada
+    // 3. Verificar se tem senha cadastrada (primeiro acesso)
     if (!staff.password_hash) {
       return {
         success: false,
-        error: "Senha não cadastrada. Entre em contato com o gerente para criar sua senha.",
+        requiresPasswordSetup: true,
+        staffId: staff.id,
+        error: "É necessário criar sua senha de acesso.",
       }
     }
 

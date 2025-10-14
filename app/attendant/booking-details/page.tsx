@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,9 +20,16 @@ import {
 import { getBookingDetails, updateBookingStatus, type BookingDetails } from "@/lib/attendant"
 import Link from "next/link"
 import { toast } from "sonner"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { StaffUser } from "@/lib/auth"
+import { StaffHeader } from "@/components/staff-header"
+import { LoadingPage } from "@/components/loading-state"
 
 function BookingDetailsContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, userType, loading: authLoading } = useAuth()
+  const staff = user && userType === "staff" ? (user as StaffUser) : null
   const appointmentId = searchParams.get("id")
 
   const [booking, setBooking] = useState<BookingDetails | null>(null)
@@ -38,6 +45,13 @@ function BookingDetailsContent() {
       setLoading(false)
     }
   }, [appointmentId])
+
+  // Check auth and redirect if not attendant
+  useEffect(() => {
+    if (!authLoading && (!staff || staff.role !== "attendant")) {
+      router.push("/login")
+    }
+  }, [authLoading, staff, router])
 
   const loadBookingDetails = async () => {
     if (!appointmentId) return
@@ -95,27 +109,36 @@ function BookingDetailsContent() {
     no_show: "Não Compareceu",
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card sticky top-0 z-10">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Link href="/attendant/availability" className="cursor-pointer">
-                <Button variant="ghost" size="icon" className="cursor-pointer">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Detalhes do Agendamento</h1>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                <Link href="/attendant/availability" className="cursor-pointer flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="cursor-pointer">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Detalhes do Agendamento</h1>
+                </div>
               </div>
+              {staff && (
+                <div className="flex-shrink-0">
+                  <StaffHeader
+                    staffName={staff.name}
+                    staffRole={staff.role as "manager" | "barber" | "attendant"}
+                    avatarUrl={staff.avatar_url}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
+        <main className="container mx-auto px-4 py-4 sm:py-8">
+          <LoadingPage />
         </main>
       </div>
     )
@@ -126,22 +149,33 @@ function BookingDetailsContent() {
       <div className="min-h-screen bg-background">
         <header className="border-b border-border bg-card sticky top-0 z-10">
           <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Link href="/attendant/availability" className="cursor-pointer">
-                <Button variant="ghost" size="icon" className="cursor-pointer">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Detalhes do Agendamento</h1>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                <Link href="/attendant/availability" className="cursor-pointer flex-shrink-0">
+                  <Button variant="ghost" size="icon" className="cursor-pointer">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Detalhes do Agendamento</h1>
+                </div>
               </div>
+              {staff && (
+                <div className="flex-shrink-0">
+                  <StaffHeader
+                    staffName={staff.name}
+                    staffRole={staff.role as "manager" | "barber" | "attendant"}
+                    avatarUrl={staff.avatar_url}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </header>
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-4 sm:py-8">
           <div className="text-center py-12">
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={loadBookingDetails} variant="outline" className="cursor-pointer">
+            <p className="text-sm text-destructive mb-4">{error}</p>
+            <Button onClick={loadBookingDetails} variant="outline" size="sm" className="cursor-pointer">
               Tentar Novamente
             </Button>
           </div>
@@ -156,49 +190,60 @@ function BookingDetailsContent() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/attendant/availability" className="cursor-pointer">
-              <Button variant="ghost" size="icon" className="cursor-pointer">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Detalhes do Agendamento</h1>
-              <p className="text-sm text-muted-foreground">Referência #{booking.id.slice(0, 8)}</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <Link href="/attendant/availability" className="cursor-pointer flex-shrink-0">
+                <Button variant="ghost" size="icon" className="cursor-pointer">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Detalhes do Agendamento</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Referência #{booking.id.slice(0, 8)}</p>
+              </div>
             </div>
+            {staff && (
+              <div className="flex-shrink-0">
+                <StaffHeader
+                  staffName={staff.name}
+                  staffRole={staff.role as "manager" | "barber" | "attendant"}
+                  avatarUrl={staff.avatar_url}
+                />
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {/* Status Card */}
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Scissors className="h-6 w-6 text-primary" />
+            <CardContent className="pt-4 sm:pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Scissors className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-foreground">{booking.customer.name}</h2>
-                    <p className="text-sm text-muted-foreground">Agendamento #{booking.id.slice(0, 8)}</p>
+                  <div className="min-w-0">
+                    <h2 className="text-base sm:text-xl font-bold text-foreground truncate">{booking.customer.name}</h2>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Agendamento #{booking.id.slice(0, 8)}</p>
                   </div>
                 </div>
-                <Badge variant="outline" className={statusColors[booking.status]}>
+                <Badge variant="outline" className={`${statusColors[booking.status]} text-xs sm:text-sm flex-shrink-0`}>
                   {statusLabels[booking.status]}
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
             {/* Customer Information */}
             <Card>
-              <CardHeader>
-                <CardTitle>Informações do Cliente</CardTitle>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Informações do Cliente</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-muted-foreground" />
                   <div>
@@ -234,10 +279,10 @@ function BookingDetailsContent() {
 
             {/* Appointment Information */}
             <Card>
-              <CardHeader>
-                <CardTitle>Informações do Agendamento</CardTitle>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Informações do Agendamento</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 sm:space-y-4">
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-muted-foreground" />
                   <div>
@@ -283,8 +328,8 @@ function BookingDetailsContent() {
 
           {/* Services */}
           <Card>
-            <CardHeader>
-              <CardTitle>Serviços</CardTitle>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Serviços</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -321,10 +366,10 @@ function BookingDetailsContent() {
 
           {/* Actions */}
           {booking.status === "pending" && (
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Button
                 className="flex-1 cursor-pointer"
-                size="lg"
+                size="default"
                 onClick={() => handleUpdateStatus("confirmed")}
                 disabled={updating}
               >
@@ -338,7 +383,7 @@ function BookingDetailsContent() {
               <Button
                 variant="destructive"
                 className="flex-1 cursor-pointer"
-                size="lg"
+                size="default"
                 onClick={() => handleUpdateStatus("cancelled")}
                 disabled={updating}
               >
@@ -353,10 +398,10 @@ function BookingDetailsContent() {
           )}
 
           {booking.status === "confirmed" && (
-            <div className="flex gap-4">
+            <div className="flex gap-3 sm:gap-4">
               <Button
                 className="flex-1 cursor-pointer"
-                size="lg"
+                size="default"
                 onClick={() => handleUpdateStatus("completed")}
                 disabled={updating}
               >
@@ -377,13 +422,7 @@ function BookingDetailsContent() {
 
 export default function BookingDetailsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingPage />}>
       <BookingDetailsContent />
     </Suspense>
   )
