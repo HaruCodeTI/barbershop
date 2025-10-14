@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
 import { ArrowLeft, Clock, User, Check, Star, Edit } from "lucide-react"
-import { generateStaticTimeSlots } from "@/lib/mock-data"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ptBR } from "date-fns/locale"
 import { createClient } from "@/lib/supabase/client"
 import { createAppointment } from "@/lib/appointments"
 import { updateAppointment } from "@/lib/customer"
+import { useStore } from "@/lib/hooks/use-store"
 
 interface Service {
   id: string
@@ -41,6 +41,7 @@ interface Customer {
 function DateTimeContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { store, loading: storeLoading } = useStore()
   const serviceIds = searchParams.get("services")?.split(",") || []
   const customerId = searchParams.get("customerId")
   const couponCode = searchParams.get("coupon")
@@ -138,10 +139,22 @@ function DateTimeContent() {
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duration, 0)
   const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0)
 
+  // Generate time slots for the selected date
   const availableSlots = useMemo(() => {
     if (!selectedDate) return []
-    const timeSlots = generateStaticTimeSlots(selectedDate)
-    return timeSlots.filter((slot) => slot.available)
+
+    const slots = []
+    const startHour = 9
+    const endHour = 19
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (const minute of [0, 30]) {
+        const time = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+        slots.push({ time, available: true })
+      }
+    }
+
+    return slots
   }, [selectedDate])
 
   const handleContinue = async () => {
@@ -180,6 +193,12 @@ function DateTimeContent() {
       }
       // Create new appointment
       else if (customerId) {
+        if (!store) {
+          setError("Loja não selecionada. Por favor, retorne e selecione uma loja.")
+          setCreating(false)
+          return
+        }
+
         const result = await createAppointment({
           customerId,
           barberId: selectedBarber,
@@ -187,7 +206,7 @@ function DateTimeContent() {
           date: selectedDate.toISOString(),
           time: selectedTime,
           couponCode: couponCode || undefined,
-          storeId: "00000000-0000-0000-0000-000000000001", // TODO: Get from context or env
+          storeId: store.id,
         })
 
         if (result.success) {
@@ -225,7 +244,7 @@ function DateTimeContent() {
 
   const isComplete = selectedDate && selectedTime && selectedBarber
 
-  if (loading) {
+  if (loading || storeLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -236,21 +255,38 @@ function DateTimeContent() {
     )
   }
 
+  if (!store) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground mb-4">
+              Por favor, selecione uma loja primeiro
+            </p>
+            <Button onClick={() => router.push("/select-store")}>
+              Selecionar Loja
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Link href={`/customer/services${customerId ? `?customerId=${customerId}` : ""}`}>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="flex-shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">
                 {isEditMode ? "Editar Data e Hora" : "Selecionar Data e Hora"}
               </h1>
-              <p className="text-sm text-muted-foreground">{isEditMode ? "Atualizar agendamento" : "Passo 2 de 4"}</p>
+              <p className="text-xs md:text-sm text-muted-foreground">{isEditMode ? "Atualizar agendamento" : "Passo 2 de 4"}</p>
             </div>
           </div>
         </div>
@@ -275,8 +311,8 @@ function DateTimeContent() {
           </Card>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid gap-6 md:gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {/* Barber Selection */}
             <Card>
               <CardHeader>
@@ -288,7 +324,7 @@ function DateTimeContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                   {barbers.map((barber) => {
                     const isPreferred = preferredBarberIds.includes(barber.id)
                     return (
@@ -361,27 +397,28 @@ function DateTimeContent() {
                 </CardTitle>
                 <CardDescription>Escolha sua data preferida para o agendamento</CardDescription>
               </CardHeader>
-              <CardContent className="flex justify-center p-6">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  disabled={(date) => date < new Date() || date.getDay() === 0}
-                  locale={ptBR}
-                  className="rounded-lg border-2 border-border/50 shadow-lg bg-card/50 backdrop-blur-sm"
+              <CardContent className="flex justify-center p-3 md:p-6 overflow-x-auto">
+                <div className="w-full max-w-full">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    disabled={(date) => date < new Date() || date.getDay() === 0}
+                    locale={ptBR}
+                    className="rounded-lg border-2 border-border/50 shadow-lg bg-card/50 backdrop-blur-sm mx-auto"
                   classNames={{
                     months: "space-y-4",
                     month: "space-y-4",
                     caption: "flex justify-center pt-1 relative items-center",
-                    caption_label: "text-base font-semibold text-foreground",
+                    caption_label: "text-sm md:text-base font-semibold text-foreground",
                     nav: "space-x-1 flex items-center",
-                    nav_button: "h-9 w-9 bg-transparent hover:bg-primary/10 rounded-md transition-colors",
+                    nav_button: "h-8 w-8 md:h-9 md:w-9 bg-transparent hover:bg-primary/10 rounded-md transition-colors",
                     table: "w-full border-collapse space-y-1",
                     head_row: "flex",
-                    head_cell: "text-muted-foreground rounded-md w-12 font-medium text-sm uppercase",
+                    head_cell: "text-muted-foreground rounded-md w-9 md:w-12 font-medium text-xs md:text-sm uppercase",
                     row: "flex w-full mt-2",
                     cell: "relative p-0 text-center focus-within:relative focus-within:z-20",
-                    day: "h-12 w-12 p-0 font-medium hover:bg-primary/20 hover:text-primary-foreground rounded-lg transition-all duration-200 hover:scale-105",
+                    day: "h-9 w-9 md:h-12 md:w-12 p-0 font-medium text-xs md:text-sm hover:bg-primary/20 hover:text-primary-foreground rounded-lg transition-all duration-200 hover:scale-105",
                     day_selected:
                       "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground shadow-md scale-105",
                     day_today: "bg-accent/50 text-accent-foreground font-bold ring-2 ring-primary/30",
@@ -389,7 +426,8 @@ function DateTimeContent() {
                     day_disabled: "text-muted-foreground/30 opacity-30 cursor-not-allowed",
                     day_hidden: "invisible",
                   }}
-                />
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -412,16 +450,16 @@ function DateTimeContent() {
                     })}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-3 md:p-6">
                   {availableSlots.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-3">
                       {availableSlots.map((slot) => {
                         const isSelected = selectedTime === slot.time
                         return (
                           <button
                             key={slot.time}
                             type="button"
-                            className={`h-14 relative overflow-hidden transition-all duration-200 rounded-md border-2 flex flex-col items-center justify-center ${
+                            className={`h-12 md:h-14 relative overflow-hidden transition-all duration-200 rounded-md border-2 flex flex-col items-center justify-center ${
                               isSelected
                                 ? "bg-primary text-primary-foreground border-primary scale-105 shadow-lg ring-2 ring-primary/50"
                                 : "bg-background border-border hover:scale-105 hover:border-primary/50 hover:bg-primary/5"
@@ -429,9 +467,9 @@ function DateTimeContent() {
                             onClick={() => handleTimeSelect(slot.time)}
                           >
                             <Clock
-                              className={`h-4 w-4 mb-1 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`}
+                              className={`h-3 w-3 md:h-4 md:w-4 mb-0.5 md:mb-1 ${isSelected ? "text-primary-foreground" : "text-muted-foreground"}`}
                             />
-                            <span className="text-sm font-semibold">{slot.time}</span>
+                            <span className="text-xs md:text-sm font-semibold">{slot.time}</span>
                             {isSelected && (
                               <div className="absolute top-1 right-1">
                                 <Check className="h-3 w-3 text-primary-foreground" />

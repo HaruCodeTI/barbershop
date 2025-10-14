@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -11,10 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Award, Calendar, User, LogOut, Scissors } from "lucide-react"
+import { Award, Calendar, LogOut, Scissors } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getCustomerStats } from "@/lib/customer"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { Customer } from "@/lib/auth"
 
 interface CustomerHeaderProps {
   customerId?: string | null
@@ -22,57 +22,14 @@ interface CustomerHeaderProps {
 
 export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderProps = {}) {
   const router = useRouter()
-  const [customer, setCustomer] = useState<{
-    id: string
-    name: string
-    loyaltyPoints: number
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, userType, signOut, loading: authLoading } = useAuth()
 
-  useEffect(() => {
-    async function loadCustomer() {
-      // Use prop if provided, otherwise fallback to localStorage
-      const customerId = propCustomerId || (typeof window !== "undefined" ? localStorage.getItem("customerId") : null)
-      const customerName = typeof window !== "undefined" ? localStorage.getItem("customerName") : null
-
-      if (!customerId || !customerName) {
-        setLoading(false)
-        setCustomer(null)
-        return
-      }
-
-      // Get loyalty points
-      const result = await getCustomerStats(customerId)
-
-      if (result.success && result.stats) {
-        setCustomer({
-          id: customerId,
-          name: customerName,
-          loyaltyPoints: result.stats.loyaltyPoints,
-        })
-      } else {
-        setCustomer({
-          id: customerId,
-          name: customerName,
-          loyaltyPoints: 0,
-        })
-      }
-
-      setLoading(false)
-    }
-
-    loadCustomer()
-  }, [propCustomerId])
-
-  const handleLogout = () => {
-    localStorage.removeItem("customerId")
-    localStorage.removeItem("customerName")
-    localStorage.removeItem("customerPhone")
+  const handleLogout = async () => {
+    await signOut()
     router.push("/")
-    window.location.reload()
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="flex items-center gap-4">
         <Link href="/customer/services">
@@ -82,12 +39,13 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
     )
   }
 
-  if (!customer) {
+  // Not logged in or not a customer
+  if (!user || userType !== "customer") {
     return (
       <div className="flex items-center gap-2 md:gap-4">
-        <Link href="/">
+        <Link href="/login">
           <Button variant="ghost" size="sm" className="text-xs md:text-sm whitespace-nowrap">
-            Login
+            Login Staff
           </Button>
         </Link>
         <Link href="/customer/services">
@@ -99,6 +57,7 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
     )
   }
 
+  const customer = user as Customer
   const firstName = customer.name.split(" ")[0]
   const initials = customer.name
     .split(" ")
@@ -126,7 +85,7 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
               <p className="text-sm font-medium">{firstName}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Award className="h-3 w-3" />
-                {customer.loyaltyPoints} pontos
+                {customer.loyalty_points} pontos
               </p>
             </div>
           </Button>
@@ -137,7 +96,7 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
               <p className="text-sm font-medium">{customer.name}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Award className="h-3 w-3" />
-                {customer.loyaltyPoints} pontos de fidelidade
+                {customer.loyalty_points} pontos de fidelidade
               </p>
             </div>
           </DropdownMenuLabel>

@@ -1,21 +1,24 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Phone, Loader2, CheckCircle2 } from "lucide-react"
-import { findCustomerByPhone } from "@/lib/customer"
-
-const STORE_ID = "00000000-0000-0000-0000-000000000001" // TODO: Get from environment or context
+import { Phone, Loader2, CheckCircle2, UserPlus } from "lucide-react"
+import { useAuth } from "@/lib/contexts/auth-context"
+import { useStore } from "@/lib/contexts/store-context"
 
 interface CustomerLoginProps {
-  onSuccess?: (customerId: string, customerName: string) => void
+  onSuccess?: () => void
   compact?: boolean
 }
 
 export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps) {
+  const router = useRouter()
+  const { customerSignIn } = useAuth()
+  const { store, loading: storeLoading } = useStore()
   const [phone, setPhone] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -53,7 +56,7 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
     setError("")
     setLoading(true)
 
-    // Remove formatação para buscar no banco
+    // Remove formatação para enviar
     const phoneNumbers = phone.replace(/\D/g, "")
 
     if (phoneNumbers.length < 10) {
@@ -62,42 +65,63 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
       return
     }
 
+    if (!store) {
+      setError("Loja não selecionada. Por favor, selecione uma loja primeiro.")
+      setLoading(false)
+      return
+    }
+
     try {
-      const result = await findCustomerByPhone(phoneNumbers, STORE_ID)
+      // Usar o novo sistema de autenticação
+      const result = await customerSignIn(phoneNumbers, store.id)
 
       if (!result.success) {
-        setError(result.error || "Erro ao buscar cliente")
+        setError(result.error || "Erro ao fazer login")
         setLoading(false)
         return
       }
-
-      if (!result.customer) {
-        setError("Cliente não encontrado. Por favor, faça seu cadastro durante o agendamento.")
-        setLoading(false)
-        return
-      }
-
-      // Armazena o cliente no localStorage
-      localStorage.setItem("customerId", result.customer.id)
-      localStorage.setItem("customerName", result.customer.name)
-      localStorage.setItem("customerPhone", result.customer.phone)
 
       setSuccess(true)
 
-      // Chama callback de sucesso se fornecido
-      if (onSuccess) {
-        onSuccess(result.customer.id, result.customer.name)
-      } else {
-        // Recarrega a página para atualizar o header
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
-      }
+      // Aguarda um momento e redireciona
+      setTimeout(() => {
+        if (result.isNewCustomer) {
+          // Novo customer: vai para completar perfil
+          router.push("/customer/complete-profile")
+        } else {
+          // Customer existente: vai para agendamentos
+          router.push("/customer/appointments")
+        }
+
+        // Chama callback de sucesso se fornecido
+        if (onSuccess) {
+          onSuccess()
+        }
+      }, 1000)
     } catch (err) {
       setError("Erro inesperado. Tente novamente.")
-    } finally {
       setLoading(false)
     }
+  }
+
+  if (storeLoading) {
+    return (
+      <div className="text-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+        <p className="text-sm text-muted-foreground mt-2">Carregando...</p>
+      </div>
+    )
+  }
+
+  if (!store) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-muted-foreground mb-4">Por favor, selecione uma loja primeiro</p>
+          <Button onClick={() => router.push("/select-store")}>Selecionar Loja</Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (compact) {
@@ -114,22 +138,22 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
               className="pl-10"
               value={phone}
               onChange={handlePhoneChange}
-              disabled={loading || success}
+              disabled={loading || success || storeLoading}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           {success && (
             <p className="text-sm text-green-600 flex items-center gap-1">
               <CheckCircle2 className="h-4 w-4" />
-              Identificado com sucesso!
+              Login realizado com sucesso!
             </p>
           )}
         </div>
-        <Button type="submit" className="w-full" disabled={loading || success}>
+        <Button type="submit" className="w-full" disabled={loading || success || storeLoading}>
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Buscando...
+              Entrando...
             </>
           ) : success ? (
             <>
@@ -137,7 +161,7 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
               Conectado
             </>
           ) : (
-            "Acessar Minha Conta"
+            "Entrar / Cadastrar"
           )}
         </Button>
       </form>
@@ -146,9 +170,11 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Já é Cliente?</CardTitle>
-        <CardDescription>Digite seu telefone para acessar suas informações e agendamentos</CardDescription>
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">Acesse sua Conta</CardTitle>
+        <CardDescription>
+          Digite seu telefone para entrar ou criar uma conta rapidamente
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,22 +189,23 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
                 className="pl-10"
                 value={phone}
                 onChange={handlePhoneChange}
-                disabled={loading || success}
+                disabled={loading || success || storeLoading}
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             {success && (
               <div className="flex items-center gap-2 text-green-600 p-3 bg-green-50 rounded-md">
                 <CheckCircle2 className="h-5 w-5" />
-                <p className="text-sm font-medium">Identificado com sucesso! Redirecionando...</p>
+                <p className="text-sm font-medium">Login realizado! Redirecionando...</p>
               </div>
             )}
           </div>
-          <Button type="submit" className="w-full" size="lg" disabled={loading || success}>
+
+          <Button type="submit" className="w-full" size="lg" disabled={loading || success || storeLoading}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Buscando...
+                Entrando...
               </>
             ) : success ? (
               <>
@@ -186,9 +213,22 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
                 Conectado
               </>
             ) : (
-              "Acessar Minha Conta"
+              <>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Entrar / Cadastrar
+              </>
             )}
           </Button>
+
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <p className="text-sm text-muted-foreground text-center">
+              📱 <strong>Novo por aqui?</strong> Não se preocupe!
+            </p>
+            <p className="text-xs text-muted-foreground text-center">
+              Ao digitar seu telefone, você será automaticamente cadastrado se for sua primeira vez. É rápido
+              e fácil!
+            </p>
+          </div>
         </form>
       </CardContent>
     </Card>

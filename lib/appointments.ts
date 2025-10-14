@@ -1,4 +1,10 @@
 import { createClient } from "./supabase/client"
+import {
+  sendAppointmentConfirmationNotification,
+  formatDateForNotification,
+  formatTimeForNotification,
+  generateBookingReference,
+} from "./notifications"
 
 export interface CreateAppointmentData {
   customerId: string
@@ -86,6 +92,7 @@ export async function createAppointment(data: CreateAppointmentData) {
         total_price: totalPrice,
         discount_amount: discountAmount,
         final_price: finalPrice,
+        coupon_id: couponId,
         status: "pending",
         notes: data.notes || null,
       })
@@ -105,10 +112,54 @@ export async function createAppointment(data: CreateAppointmentData) {
 
     if (servicesLinkError) throw servicesLinkError
 
-    // 6. Update coupon usage if coupon was used
-    // NOTE: Coupon usage tracking is handled by managers/admin
-    // TODO: Add coupon_id field to appointments table and create a trigger to auto-increment
-    // For now, managers can manually verify and update coupon usage from dashboard
+    // 6. Coupon usage is automatically tracked by database trigger
+    // 7. Loyalty points are automatically awarded when appointment status changes to 'completed'
+
+    // 8. Send confirmation notifications (Email + SMS)
+    try {
+      // Get full appointment details for notifications
+      const { data: fullAppointment } = await supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          customer:customers(name, email, phone),
+          barber:barbers(name),
+          store:stores(name, address, phone),
+          appointment_services(
+            service:services(name)
+          )
+        `,
+        )
+        .eq("id", appointment.id)
+        .single()
+
+      if (fullAppointment) {
+        const notificationResult = await sendAppointmentConfirmationNotification({
+          customerName: fullAppointment.customer.name,
+          customerEmail: fullAppointment.customer.email || "",
+          customerPhone: fullAppointment.customer.phone,
+          barberName: fullAppointment.barber.name,
+          storeName: fullAppointment.store.name,
+          storeAddress: fullAppointment.store.address || "",
+          storePhone: fullAppointment.store.phone || "",
+          appointmentDate: formatDateForNotification(new Date(fullAppointment.appointment_date)),
+          appointmentTime: formatTimeForNotification(fullAppointment.appointment_time),
+          services: fullAppointment.appointment_services.map((as: any) => as.service.name),
+          totalPrice: Number(fullAppointment.final_price),
+          bookingReference: generateBookingReference(fullAppointment.id),
+        })
+
+        console.log("[createAppointment] Notifications sent:", {
+          emailSent: notificationResult.emailSent,
+          smsSent: notificationResult.smsSent,
+          errors: notificationResult.errors,
+        })
+      }
+    } catch (notificationError) {
+      // Don't fail the appointment creation if notifications fail
+      console.error("[createAppointment] Notification error (non-critical):", notificationError)
+    }
 
     return { success: true, appointmentId: appointment.id, appointment }
   } catch (error) {

@@ -10,6 +10,8 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { Customer as AuthCustomer } from "@/lib/auth"
 
 interface Service {
   id: string
@@ -43,6 +45,7 @@ interface Customer {
 export default function ServiceSelectionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, userType } = useAuth()
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
@@ -59,6 +62,9 @@ export default function ServiceSelectionPage() {
   // Edit mode state
   const isEditMode = searchParams.get("editMode") === "true"
   const appointmentId = searchParams.get("appointmentId")
+
+  // Check if user is logged in from AuthContext
+  const isCustomerLoggedIn = user && userType === "customer"
 
   useEffect(() => {
     async function fetchServices() {
@@ -78,54 +84,43 @@ export default function ServiceSelectionPage() {
     fetchServices()
   }, [])
 
-  // Check if customer is already logged in from localStorage
+  // Check if customer is already logged in from AuthContext
   useEffect(() => {
     async function checkExistingCustomer() {
-      const existingCustomerId = typeof window !== "undefined" ? localStorage.getItem("customerId") : null
+      // If logged in via AuthContext, use that data
+      if (isCustomerLoggedIn) {
+        const customer = user as AuthCustomer
+        setCustomerData({
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          loyalty_points: customer.loyalty_points,
+        })
+        setShowCustomerLogin(false)
 
-      if (!existingCustomerId) {
-        return
-      }
+        // Fetch customer's favorite services (most booked)
+        const supabase = createClient()
+        const { data: appointments } = await supabase
+          .from("appointments")
+          .select("appointment_services(service_id)")
+          .eq("customer_id", customer.id)
+          .eq("status", "completed")
+          .limit(10)
 
-      const supabase = createClient()
-      const { data: customer, error } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("id", existingCustomerId)
-        .single()
-
-      if (error || !customer) {
-        // Customer not found or error, clear localStorage
-        localStorage.removeItem("customerId")
-        localStorage.removeItem("customerName")
-        localStorage.removeItem("customerPhone")
-        return
-      }
-
-      setCustomerData(customer)
-      setShowCustomerLogin(false)
-
-      // Fetch customer's favorite services (most booked)
-      const { data: appointments } = await supabase
-        .from("appointments")
-        .select("appointment_services(service_id)")
-        .eq("customer_id", customer.id)
-        .eq("status", "completed")
-        .limit(10)
-
-      if (appointments) {
-        const serviceIds = appointments.flatMap((apt: any) => apt.appointment_services.map((as: any) => as.service_id))
-        const uniqueServices = [...new Set(serviceIds)]
-        setFavoriteServices(uniqueServices.slice(0, 3))
-        // Only auto-select services if NOT in edit mode
-        if (!isEditMode) {
-          setSelectedServices(uniqueServices.slice(0, 2))
+        if (appointments) {
+          const serviceIds = appointments.flatMap((apt: any) => apt.appointment_services.map((as: any) => as.service_id))
+          const uniqueServices = [...new Set(serviceIds)]
+          setFavoriteServices(uniqueServices.slice(0, 3))
+          // Only auto-select services if NOT in edit mode
+          if (!isEditMode) {
+            setSelectedServices(uniqueServices.slice(0, 2))
+          }
         }
       }
     }
 
     checkExistingCustomer()
-  }, [isEditMode])
+  }, [isCustomerLoggedIn, user, isEditMode])
 
   // Load appointment data in edit mode
   useEffect(() => {
@@ -257,10 +252,10 @@ export default function ServiceSelectionPage() {
   }
 
   const categories = [
-    { id: "haircut", label: "Cortes", color: "bg-primary/20 text-primary border-primary/30" },
-    { id: "beard", label: "Barba", color: "bg-accent/20 text-accent border-accent/30" },
-    { id: "combo", label: "Combos", color: "bg-success/20 text-success border-success/30" },
-    { id: "finishing", label: "Finalização", color: "bg-warning/20 text-warning border-warning/30" },
+    { id: "Corte", label: "Cortes", color: "bg-primary/20 text-primary border-primary/30" },
+    { id: "Barba", label: "Barba", color: "bg-accent/20 text-accent border-accent/30" },
+    { id: "Combo", label: "Combos", color: "bg-success/20 text-success border-success/30" },
+    { id: "Tratamento", label: "Tratamento", color: "bg-warning/20 text-warning border-warning/30" },
   ]
 
   const recommendedServices = services.filter((s) => favoriteServices.includes(s.id))
@@ -280,17 +275,15 @@ export default function ServiceSelectionPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex items-center gap-3">
-                <Scissors className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-bold text-foreground">Selecionar Serviços</h1>
-              </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="flex-shrink-0">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <Scissors className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
+              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Selecionar Serviços</h1>
             </div>
           </div>
         </div>
@@ -315,7 +308,7 @@ export default function ServiceSelectionPage() {
           </Card>
         )}
 
-        {showCustomerLogin && !isEditMode && (
+        {showCustomerLogin && !isEditMode && !isCustomerLoggedIn && (
           <Card className="mb-8 border-primary/50">
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -327,7 +320,7 @@ export default function ServiceSelectionPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input
                     placeholder="Digite seu telefone"
@@ -337,8 +330,10 @@ export default function ServiceSelectionPage() {
                   />
                   {phoneError && <p className="text-sm text-destructive mt-1">{phoneError}</p>}
                 </div>
-                <Button onClick={handleCustomerLogin}>Identificar</Button>
-                <Button variant="outline" onClick={() => setShowCustomerLogin(false)}>
+                <Button onClick={handleCustomerLogin} className="whitespace-nowrap">
+                  Identificar
+                </Button>
+                <Button variant="outline" onClick={() => setShowCustomerLogin(false)} className="whitespace-nowrap">
                   Continuar como novo cliente
                 </Button>
               </div>

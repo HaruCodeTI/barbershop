@@ -8,11 +8,10 @@ import { ArrowLeft, Plus, CalendarIcon, Loader2 } from "lucide-react"
 import { getBarberAvailability, type BarberAvailability } from "@/lib/attendant"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-
-// TODO: Get from auth/context
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function AttendantAvailabilityPage() {
+  const { store, loading: storeLoading } = useStore()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [selectedSlot, setSelectedSlot] = useState<{ barberId: string; time: string } | null>(null)
   const [availability, setAvailability] = useState<BarberAvailability[]>([])
@@ -24,10 +23,12 @@ export default function AttendantAvailabilityPage() {
   }, [selectedDate])
 
   const loadAvailability = async () => {
+    if (!store) return
+
     setLoading(true)
     setError(null)
     const dateStr = selectedDate.toISOString().split("T")[0]
-    const result = await getBarberAvailability(STORE_ID, dateStr)
+    const result = await getBarberAvailability(store.id, dateStr)
 
     if (result.success && result.availability) {
       setAvailability(result.availability)
@@ -43,6 +44,32 @@ export default function AttendantAvailabilityPage() {
     if (status === "available") {
       setSelectedSlot({ barberId, time })
     }
+  }
+
+  if (storeLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground mt-2">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!store) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground mb-4">Loja não encontrada. Por favor, faça login novamente.</p>
+            <Link href="/login">
+              <Button>Fazer Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (

@@ -7,11 +7,10 @@ export interface Coupon {
   discount_type: "percentage" | "fixed"
   discount_value: number
   min_purchase: number
-  max_discount: number | null
+  max_uses: number
+  current_uses: number
   valid_from: string
   valid_until: string
-  usage_limit: number
-  used_count: number
   is_active: boolean
   store_id: string
   created_at: string
@@ -53,10 +52,9 @@ export async function createCoupon(
     discount_type: "percentage" | "fixed"
     discount_value: number
     min_purchase: number
-    max_discount?: number
     valid_from: string
     valid_until: string
-    usage_limit: number
+    max_uses: number
   },
 ): Promise<{ success: boolean; couponId?: string; error?: string }> {
   const supabase = createClient()
@@ -83,11 +81,10 @@ export async function createCoupon(
         discount_type: coupon.discount_type,
         discount_value: coupon.discount_value,
         min_purchase: coupon.min_purchase,
-        max_discount: coupon.max_discount || null,
         valid_from: coupon.valid_from,
         valid_until: coupon.valid_until,
-        usage_limit: coupon.usage_limit,
-        used_count: 0,
+        max_uses: coupon.max_uses,
+        current_uses: 0,
         is_active: true,
       })
       .select("id")
@@ -113,10 +110,9 @@ export async function updateCoupon(
     discount_type?: "percentage" | "fixed"
     discount_value?: number
     min_purchase?: number
-    max_discount?: number
     valid_from?: string
     valid_until?: string
-    usage_limit?: number
+    max_uses?: number
   },
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient()
@@ -190,9 +186,9 @@ export async function deleteCoupon(couponId: string): Promise<{ success: boolean
 
   try {
     // Check if coupon has been used
-    const { data: coupon } = await supabase.from("coupons").select("used_count").eq("id", couponId).single()
+    const { data: coupon } = await supabase.from("coupons").select("current_uses").eq("id", couponId).single()
 
-    if (coupon && coupon.used_count > 0) {
+    if (coupon && coupon.current_uses > 0) {
       return { success: false, error: "Não é possível excluir um cupom que já foi usado" }
     }
 
@@ -247,7 +243,7 @@ export async function validateCoupon(
       return { success: false, error: "Cupom expirado" }
     }
 
-    if (coupon.used_count >= coupon.usage_limit) {
+    if (coupon.current_uses >= coupon.max_uses) {
       return { success: false, error: "Limite de uso do cupom atingido" }
     }
 
@@ -262,9 +258,6 @@ export async function validateCoupon(
     let discountAmount = 0
     if (coupon.discount_type === "percentage") {
       discountAmount = (purchaseAmount * coupon.discount_value) / 100
-      if (coupon.max_discount && discountAmount > coupon.max_discount) {
-        discountAmount = coupon.max_discount
-      }
     } else {
       discountAmount = coupon.discount_value
     }

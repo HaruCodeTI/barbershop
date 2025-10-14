@@ -28,11 +28,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function ManageServicesPage() {
+  const { store, loading: storeLoading } = useStore()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -54,8 +53,9 @@ export default function ManageServicesPage() {
   }, [])
 
   const loadServices = async () => {
+    if (!store) return
     setLoading(true)
-    const result = await getServices(STORE_ID)
+    const result = await getServices(store.id)
 
     if (result.success && result.services) {
       setServices(result.services)
@@ -87,7 +87,8 @@ export default function ManageServicesPage() {
       }
     } else {
       // Create new service
-      const result = await createService(STORE_ID, {
+      if (!store) return
+      const result = await createService(store.id, {
         name: formData.name,
         description: formData.description,
         duration: Number.parseInt(formData.duration),
@@ -151,6 +152,13 @@ export default function ManageServicesPage() {
     setEditingService(null)
     setFormData({ name: "", description: "", duration: "", price: "", category: "haircut" })
     setIsDialogOpen(true)
+  }
+
+  const categoryLabels = {
+    haircut: "Corte",
+    beard: "Barba",
+    combo: "Combo",
+    styling: "Finalização",
   }
 
   const categoryColors = {
@@ -309,7 +317,7 @@ export default function ManageServicesPage() {
                     <CardDescription className="mt-2">{service.description}</CardDescription>
                   </div>
                   <Badge variant="outline" className={categoryColors[service.category]}>
-                    {service.category}
+                    {categoryLabels[service.category]}
                   </Badge>
                 </div>
               </CardHeader>
@@ -318,11 +326,11 @@ export default function ManageServicesPage() {
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span>{service.duration} minutes</span>
+                      <span>{service.duration} minutos</span>
                     </div>
                     <div className="flex items-center gap-1 font-semibold text-primary">
                       <DollarSign className="h-4 w-4" />
-                      <span>{service.price}</span>
+                      <span>R$ {service.price.toFixed(2)}</span>
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 pt-2 border-t">

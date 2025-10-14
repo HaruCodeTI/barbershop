@@ -19,11 +19,10 @@ import {
   Legend,
 } from "recharts"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function RevenueReportPage() {
+  const { store, loading: storeLoading } = useStore()
   const [report, setReport] = useState<RevenueReport | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -32,8 +31,9 @@ export default function RevenueReportPage() {
   }, [])
 
   const loadReport = async () => {
+    if (!store) return
     setLoading(true)
-    const result = await getRevenueReport(STORE_ID, 6)
+    const result = await getRevenueReport(store.id, 6)
 
     if (result.success && result.report) {
       setReport(result.report)

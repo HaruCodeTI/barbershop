@@ -9,21 +9,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Mail, Phone, User, Lock } from "lucide-react"
-import { mockServices, mockBarbers } from "@/lib/mock-data"
+import { ArrowLeft, Mail, Phone, User, Lock, Loader2, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { createCustomerAndAppointment } from "@/lib/appointments"
+import { createCustomerAndAppointment, createAppointment } from "@/lib/appointments"
 import { createClient } from "@/lib/supabase/client"
+import { useStore } from "@/lib/hooks/use-store"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { Customer as AuthCustomer } from "@/lib/auth"
 
 function SignupContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { store, loading: storeLoading } = useStore()
+  const { user, userType, loading: authLoading } = useAuth()
 
   const serviceIds = searchParams.get("services")?.split(",") || []
   const date = searchParams.get("date") || ""
   const time = searchParams.get("time") || ""
   const barberId = searchParams.get("barber") || ""
   const couponCode = searchParams.get("coupon")
+
+  // Check if user is logged in
+  const isCustomerLoggedIn = user && userType === "customer"
+  const loggedInCustomer = isCustomerLoggedIn ? (user as AuthCustomer) : null
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -60,8 +68,38 @@ function SignupContent() {
   }, [])
 
   const selectedServices = services
-  const selectedBarber = barber || mockBarbers.find((b) => b.id === barberId)
+  const selectedBarber = barber
   const selectedDate = date ? new Date(date) : null
+
+  // Show loading state while store or auth is loading
+  if (storeLoading || authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if no store selected
+  if (!store) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground mb-4">
+              Por favor, selecione uma loja primeiro
+            </p>
+            <Button onClick={() => router.push("/select-store")}>
+              Selecionar Loja
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -100,6 +138,11 @@ function SignupContent() {
       return
     }
 
+    if (!store) {
+      setErrors({ submit: "Loja não selecionada. Por favor, retorne e selecione uma loja." })
+      return
+    }
+
     setCreating(true)
     setErrors({})
 
@@ -111,7 +154,7 @@ function SignupContent() {
           name: fullName,
           email: formData.email,
           phone: formData.phone,
-          storeId: "00000000-0000-0000-0000-000000000001", // TODO: Get from context or env
+          storeId: store.id,
         },
         {
           barberId,
@@ -119,9 +162,39 @@ function SignupContent() {
           date,
           time,
           couponCode,
-          storeId: "00000000-0000-0000-0000-000000000001", // TODO: Get from context or env
+          storeId: store.id,
         },
       )
+
+      if (result.success) {
+        router.push(`/customer/confirmation?appointmentId=${result.appointmentId}`)
+      } else {
+        setErrors({ submit: result.error || "Erro ao criar agendamento" })
+        setCreating(false)
+      }
+    } catch (error) {
+      setErrors({ submit: "Erro inesperado ao criar agendamento" })
+      setCreating(false)
+    }
+  }
+
+  // Handle appointment creation for logged-in customer
+  const handleLoggedInSubmit = async () => {
+    if (!store || !loggedInCustomer) return
+
+    setCreating(true)
+    setErrors({})
+
+    try {
+      const result = await createAppointment({
+        customerId: loggedInCustomer.id,
+        barberId,
+        serviceIds,
+        date,
+        time,
+        couponCode: couponCode || undefined,
+        storeId: store.id,
+      })
 
       if (result.success) {
         router.push(`/customer/confirmation?appointmentId=${result.appointmentId}`)
@@ -153,8 +226,12 @@ function SignupContent() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Criar Conta</h1>
-              <p className="text-sm text-muted-foreground">Passo 3 de 4</p>
+              <h1 className="text-xl font-bold text-foreground">
+                {isCustomerLoggedIn ? "Confirmar Agendamento" : "Criar Conta"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {isCustomerLoggedIn ? "Revise seus dados" : "Passo 3 de 4"}
+              </p>
             </div>
           </div>
         </div>
@@ -163,13 +240,75 @@ function SignupContent() {
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cadastro</CardTitle>
-                <CardDescription>Crie sua conta para completar o agendamento</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
+            {isCustomerLoggedIn ? (
+              // Logged in customer - show confirmation
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-success/20 flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-success" />
+                    </div>
+                    <div>
+                      <CardTitle>Olá, {loggedInCustomer?.name.split(" ")[0]}!</CardTitle>
+                      <CardDescription>Confirme seus dados e finalize o agendamento</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                      <User className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Nome Completo</p>
+                        <p className="text-base font-semibold">{loggedInCustomer?.name}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                      <Phone className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Telefone</p>
+                        <p className="text-base font-semibold">{loggedInCustomer?.phone}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {errors.submit && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+                      <p className="text-sm text-destructive">{errors.submit}</p>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    className="w-full"
+                    size="lg"
+                    onClick={handleLoggedInSubmit}
+                    disabled={creating}
+                  >
+                    {creating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Criando agendamento...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Confirmar e Finalizar Agendamento
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              // Not logged in - show signup form
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cadastro</CardTitle>
+                  <CardDescription>Crie sua conta para completar o agendamento</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Nome</Label>
@@ -305,12 +444,20 @@ function SignupContent() {
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full" size="lg" disabled={creating}>
-                    {creating ? "Criando agendamento..." : "Concluir Agendamento"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                    <Button type="submit" className="w-full" size="lg" disabled={creating}>
+                      {creating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Criando agendamento...
+                        </>
+                      ) : (
+                        "Concluir Agendamento"
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="lg:col-span-1">

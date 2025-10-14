@@ -26,11 +26,10 @@ import {
 } from "@/lib/loyalty"
 import Link from "next/link"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function LoyaltyPage() {
+  const { store, loading: storeLoading } = useStore()
   const [program, setProgram] = useState<LoyaltyProgram | null>(null)
   const [stats, setStats] = useState({
     totalCustomers: 0,
@@ -62,7 +61,8 @@ export default function LoyaltyPage() {
   }
 
   const loadProgram = async () => {
-    const result = await getLoyaltyProgram(STORE_ID)
+    if (!store) return
+    const result = await getLoyaltyProgram(store.id)
     if (result.success && result.program) {
       setProgram(result.program)
       setFormData({
@@ -77,7 +77,8 @@ export default function LoyaltyPage() {
   }
 
   const loadStats = async () => {
-    const result = await getLoyaltyStats(STORE_ID)
+    if (!store) return
+    const result = await getLoyaltyStats(store.id)
     if (result.success && result.stats) {
       setStats(result.stats)
     } else {
@@ -87,9 +88,13 @@ export default function LoyaltyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!store) {
+      toast.error("Loja não selecionada")
+      return
+    }
     setSubmitting(true)
 
-    const result = await upsertLoyaltyProgram(STORE_ID, {
+    const result = await upsertLoyaltyProgram(store.id, {
       name: formData.name,
       description: formData.description || undefined,
       points_per_real: formData.points_per_real,

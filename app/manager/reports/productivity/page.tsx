@@ -9,11 +9,10 @@ import { getProductivityReport, type ProductivityReport } from "@/lib/reports"
 import Link from "next/link"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function ProductivityReportPage() {
+  const { store, loading: storeLoading } = useStore()
   const [report, setReport] = useState<ProductivityReport | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -22,8 +21,9 @@ export default function ProductivityReportPage() {
   }, [])
 
   const loadReport = async () => {
+    if (!store) return
     setLoading(true)
-    const result = await getProductivityReport(STORE_ID)
+    const result = await getProductivityReport(store.id)
 
     if (result.success && result.report) {
       setReport(result.report)

@@ -9,11 +9,10 @@ import Link from "next/link"
 import { getCustomerStats, type CustomerStats } from "@/lib/customer"
 import { getCustomerLoyalty, getLoyaltyProgram, type CustomerLoyalty } from "@/lib/loyalty"
 import { CustomerRecommendations } from "@/components/customer-recommendations"
-
-// TODO: Get from database or auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 function LoyaltyContent() {
+  const { store, loading: storeLoading } = useStore()
   const [stats, setStats] = useState<CustomerStats | null>(null)
   const [loyalty, setLoyalty] = useState<CustomerLoyalty | null>(null)
   const [pointsPerReal, setPointsPerReal] = useState(10)
@@ -31,12 +30,17 @@ function LoyaltyContent() {
         return
       }
 
+      if (!store) {
+        setLoading(false)
+        return
+      }
+
       try {
         // Load customer stats and loyalty data in parallel
         const [statsResult, loyaltyResult, programResult] = await Promise.all([
           getCustomerStats(customerId),
-          getCustomerLoyalty(customerId, STORE_ID),
-          getLoyaltyProgram(STORE_ID),
+          getCustomerLoyalty(customerId, store.id),
+          getLoyaltyProgram(store.id),
         ])
 
         if (statsResult.success && statsResult.stats) {
@@ -60,7 +64,36 @@ function LoyaltyContent() {
     }
 
     fetchData()
-  }, [customerId])
+  }, [customerId, store])
+
+  if (storeLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!store) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Loja Não Selecionada</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Por favor, selecione uma loja primeiro.</p>
+            <Link href="/select-store">
+              <Button className="w-full">Selecionar Loja</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (!customerId) {
     return (

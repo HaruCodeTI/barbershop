@@ -28,11 +28,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function ManageBarbersPage() {
+  const { store, loading: storeLoading } = useStore()
   const [barbers, setBarbers] = useState<Barber[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -53,8 +52,9 @@ export default function ManageBarbersPage() {
   }, [])
 
   const loadBarbers = async () => {
+    if (!store) return
     setLoading(true)
-    const result = await getBarbers(STORE_ID)
+    const result = await getBarbers(store.id)
 
     if (result.success && result.barbers) {
       setBarbers(result.barbers)
@@ -85,7 +85,8 @@ export default function ManageBarbersPage() {
       }
     } else {
       // Create new barber
-      const result = await createBarber(STORE_ID, {
+      if (!store) return
+      const result = await createBarber(store.id, {
         name: formData.name,
         email: formData.email,
         phone: formData.phone || undefined,

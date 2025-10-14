@@ -1,4 +1,10 @@
 import { createClient } from "./supabase/client"
+import {
+  sendAppointmentCancellationNotification,
+  formatDateForNotification,
+  formatTimeForNotification,
+  generateBookingReference,
+} from "./notifications"
 
 export interface CustomerAppointment {
   id: string
@@ -580,6 +586,57 @@ export async function cancelAppointment(appointmentId: string, reason?: string) 
     }
 
     console.log("[cancelAppointment] Update successful! Result:", updateResult)
+
+    // Send cancellation notifications (Email + SMS)
+    try {
+      // Get full appointment details for notifications
+      console.log("[cancelAppointment] Fetching full appointment details for notifications...")
+      const { data: fullAppointment } = await supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          customer:customers(name, email, phone),
+          barber:barbers(name),
+          store:stores(name, address, phone),
+          appointment_services(
+            service:services(name)
+          )
+        `,
+        )
+        .eq("id", appointmentId)
+        .single()
+
+      if (fullAppointment && fullAppointment.customer && fullAppointment.barber && fullAppointment.store) {
+        console.log("[cancelAppointment] Sending cancellation notifications...")
+        const notificationResult = await sendAppointmentCancellationNotification({
+          customerName: fullAppointment.customer.name,
+          customerEmail: fullAppointment.customer.email || "",
+          customerPhone: fullAppointment.customer.phone,
+          barberName: fullAppointment.barber.name,
+          storeName: fullAppointment.store.name,
+          storeAddress: fullAppointment.store.address || "",
+          storePhone: fullAppointment.store.phone || "",
+          appointmentDate: formatDateForNotification(new Date(fullAppointment.appointment_date)),
+          appointmentTime: formatTimeForNotification(fullAppointment.appointment_time),
+          services: fullAppointment.appointment_services.map((as: any) => as.service.name),
+          totalPrice: Number(fullAppointment.final_price),
+          bookingReference: generateBookingReference(fullAppointment.id),
+        })
+
+        console.log("[cancelAppointment] Notifications sent:", {
+          emailSent: notificationResult.emailSent,
+          smsSent: notificationResult.smsSent,
+          errors: notificationResult.errors,
+        })
+      } else {
+        console.warn("[cancelAppointment] Could not fetch complete appointment data for notifications")
+      }
+    } catch (notificationError) {
+      // Don't fail the cancellation if notifications fail
+      console.error("[cancelAppointment] Notification error (non-critical):", notificationError)
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[cancelAppointment] Exception caught:", error)

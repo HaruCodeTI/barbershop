@@ -1,30 +1,88 @@
-# Service selection screen
+# 💈 GoBarber - Sistema Completo de Agendamento para Barbearias
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Sistema moderno e completo de agendamento para barbearias com multi-tenancy, notificações automáticas, sistema de fidelidade e muito mais.
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/harucodes-projects/gobarber)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/tuZYjCBKKSY)
+![Next.js](https://img.shields.io/badge/Next.js-15-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres-green)
+![Tailwind](https://img.shields.io/badge/Tailwind-CSS-38bdf8)
 
-## Overview
+## ✨ Features
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+### 🎯 Core Features
 
-## Deployment
+- ✅ **Multi-Tenancy Completo** - Múltiplas lojas independentes
+- ✅ **Agendamento Online** - Interface intuitiva para clientes
+- ✅ **Gestão de Barbeiros** - Perfis, especialidades e disponibilidade
+- ✅ **Catálogo de Serviços** - Cortes, barba, combos, etc.
+- ✅ **Sistema de Autenticação** - Login/registro com Supabase Auth
+- ✅ **Notificações Automáticas**
+  - 📧 Email via Resend (confirmação, lembretes, cancelamento)
+  - 📱 SMS via Twilio (confirmação e lembretes de 1h)
+  - ⏰ Lembretes automáticos (24h email, 1h SMS)
 
-Your project is live at:
+### 💎 Features Avançadas
 
-**[https://vercel.com/harucodes-projects/gobarber](https://vercel.com/harucodes-projects/gobarber)**
+- ✅ **Sistema de Cupons** - Descontos percentuais ou fixos com validação
+- ✅ **Programa de Fidelidade** - Pontos por agendamento e recompensas
+- ✅ **Recomendações Personalizadas** - IA sugere barbeiros e serviços
+- ✅ **Upload de Avatars** - Supabase Storage com CDN
 
-## Build your app
+## 🚀 Quick Start
 
-Continue building your app on:
+```bash
+# 1. Clone o repositório
+git clone <repo-url>
+cd apps/app-barber
 
-**[https://v0.app/chat/projects/tuZYjCBKKSY](https://v0.app/chat/projects/tuZYjCBKKSY)**
+# 2. Instale dependências
+npm install
 
-## How It Works
+# 3. Configure variáveis de ambiente
+cp .env.example .env.local
+# Edite .env.local com suas credenciais
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+# 4. Execute migrações do Supabase
+# Ver docs/SETUP.md para detalhes
+
+# 5. Inicie o servidor
+npm run dev
+```
+
+Acesse: [http://localhost:3000](http://localhost:3000)
+
+📖 **[Guia de Setup Completo](./docs/SETUP.md)**
+
+## 🛠️ Tech Stack
+
+**Frontend:** Next.js 15, TypeScript, Tailwind CSS, shadcn/ui
+
+**Backend:** Supabase (PostgreSQL + Auth + Storage)
+
+**Integrações:** Resend (Email), Twilio (SMS), Vercel Cron
+
+## 📊 MVP Roadmap
+
+- ✅ **Phase 1** - Multi-Tenancy (100%)
+- ✅ **Phase 2** - Cupons & Fidelidade (100%)
+- ✅ **Phase 3** - Autenticação (100%)
+- ✅ **Phase 4** - Notificações (100%)
+- ✅ **Phase 5** - Polish Final (100%)
+- 🔜 **Phase 6** - Admin Dashboard (Próximo)
+
+## 📚 Documentação
+
+- [Guia de Setup](./docs/SETUP.md)
+- [Sistema de Notificações](./docs/REMINDERS.md)
+- [Avatar Upload](./docs/AVATAR_UPLOAD.md)
+
+## 🌐 Deploy
+
+**Live:** [https://vercel.com/harucodes-projects/gobarber](https://vercel.com/harucodes-projects/gobarber)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+---
+
+**Feito com ❤️ e ☕ - Desenvolvido com Claude Code 🚀**

@@ -36,10 +36,14 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getCustomerAppointments, cancelAppointment, type CustomerAppointment } from "@/lib/customer"
 import { downloadAppointmentPDF, downloadAppointmentICS, type AppointmentData } from "@/lib/appointment-utils"
+import { CustomerAuthGuard } from "@/components/customer-auth-guard"
+import { useAuth } from "@/lib/contexts/auth-context"
+import type { Customer } from "@/lib/auth"
 
 function AppointmentsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, userType, loading: authLoading } = useAuth()
   const [appointments, setAppointments] = useState<CustomerAppointment[]>([])
   const [filteredAppointments, setFilteredAppointments] = useState<CustomerAppointment[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,17 +61,10 @@ function AppointmentsContent() {
   const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null)
   const [downloadingICS, setDownloadingICS] = useState<string | null>(null)
 
-  // Customer data from localStorage - must use state to avoid hydration errors
-  const [customerId, setCustomerId] = useState<string | null>(null)
-  const [customerName, setCustomerName] = useState<string | null>(null)
-  const [customerDataLoaded, setCustomerDataLoaded] = useState(false)
-
-  // Load customer data from localStorage after mount
-  useEffect(() => {
-    setCustomerId(localStorage.getItem("customerId"))
-    setCustomerName(localStorage.getItem("customerName"))
-    setCustomerDataLoaded(true)
-  }, [])
+  // Get customer data from AuthContext
+  const customer = user && userType === "customer" ? (user as Customer) : null
+  const customerId = customer?.id || null
+  const customerName = customer?.name || null
 
   // Memoized counters for tabs - updates automatically when appointments change
   const appointmentCounts = useMemo(() => {
@@ -89,8 +86,8 @@ function AppointmentsContent() {
 
   useEffect(() => {
     async function fetchAppointments() {
-      // Wait for customer data to be loaded from localStorage
-      if (!customerDataLoaded) {
+      // Wait for auth to load
+      if (authLoading) {
         return
       }
 
@@ -129,7 +126,7 @@ function AppointmentsContent() {
     }
 
     fetchAppointments()
-  }, [customerId, searchParams, customerDataLoaded])
+  }, [customerId, searchParams, authLoading, activeFilter])
 
   const filterAppointments = (appts: CustomerAppointment[], filter: typeof activeFilter) => {
     const today = new Date()
@@ -340,8 +337,8 @@ function AppointmentsContent() {
     return appointmentDateTime > now && ["pending", "confirmed"].includes(appointment.status)
   }
 
-  // Show loading while customer data is being loaded from localStorage
-  if (!customerDataLoaded || loading) {
+  // Show loading while auth or appointments are loading
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -1155,14 +1152,16 @@ function AppointmentsContent() {
 
 export default function AppointmentsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="h-12 w-12 text-primary animate-spin" />
-        </div>
-      }
-    >
-      <AppointmentsContent />
-    </Suspense>
+    <CustomerAuthGuard>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          </div>
+        }
+      >
+        <AppointmentsContent />
+      </Suspense>
+    </CustomerAuthGuard>
   )
 }

@@ -25,21 +25,15 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Protect staff routes
-  const isStaffRoute =
-    request.nextUrl.pathname.startsWith("/attendant") ||
-    request.nextUrl.pathname.startsWith("/barber") ||
-    request.nextUrl.pathname.startsWith("/manager")
-
-  if (isStaffRoute && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
-  }
+  // NOTE: Middleware auth protection is disabled because we're using custom authentication
+  // with localStorage tokens instead of Supabase Auth. Auth guards are handled on the
+  // client-side via AuthContext and page-level checks.
+  //
+  // If you need server-side route protection, you'll need to:
+  // 1. Move auth tokens from localStorage to cookies
+  // 2. Validate session tokens in this middleware
+  //
+  // For now, all route protection is done client-side.
 
   return supabaseResponse
 }

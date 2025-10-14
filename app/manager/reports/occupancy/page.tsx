@@ -9,11 +9,10 @@ import Link from "next/link"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-
-// TODO: Get from auth
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 export default function OccupancyReportPage() {
+  const { store, loading: storeLoading } = useStore()
   const [report, setReport] = useState<OccupancyReport | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -22,8 +21,9 @@ export default function OccupancyReportPage() {
   }, [])
 
   const loadReport = async () => {
+    if (!store) return
     setLoading(true)
-    const result = await getOccupancyReport(STORE_ID)
+    const result = await getOccupancyReport(store.id)
 
     if (result.success && result.report) {
       setReport(result.report)

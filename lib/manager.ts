@@ -316,6 +316,7 @@ export async function createBarber(
         name: barber.name,
         email: barber.email,
         phone: barber.phone || null,
+        role: "barber",
         avatar_url: barber.avatar_url || null,
         specialties: barber.specialties || [],
         is_active: true,

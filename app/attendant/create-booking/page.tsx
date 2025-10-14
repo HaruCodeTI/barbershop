@@ -15,13 +15,12 @@ import { createBooking, searchCustomer } from "@/lib/attendant"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { toast } from "sonner"
-
-// TODO: Get from auth/context
-const STORE_ID = "hobnkfghduuspsdvhkla"
+import { useStore } from "@/lib/hooks/use-store"
 
 function CreateBookingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { store, loading: storeLoading } = useStore()
 
   const preselectedBarber = searchParams.get("barber") || ""
   const preselectedDate = searchParams.get("date") || ""
@@ -51,11 +50,12 @@ function CreateBookingContent() {
   }, [])
 
   const loadBarbers = async () => {
+    if (!store) return
     const supabase = createClient()
     const { data } = await supabase
       .from("barbers")
       .select("id, name")
-      .eq("store_id", STORE_ID)
+      .eq("store_id", store.id)
       .eq("is_active", true)
       .order("name")
 
@@ -63,11 +63,12 @@ function CreateBookingContent() {
   }
 
   const loadServices = async () => {
+    if (!store) return
     const supabase = createClient()
     const { data } = await supabase
       .from("services")
       .select("id, name, description, duration, price, category")
-      .eq("store_id", STORE_ID)
+      .eq("store_id", store.id)
       .eq("is_active", true)
       .order("name")
 
@@ -80,8 +81,13 @@ function CreateBookingContent() {
       return
     }
 
+    if (!store) {
+      toast.error("Loja não selecionada")
+      return
+    }
+
     setSearchingCustomer(true)
-    const result = await searchCustomer(formData.customerPhone, STORE_ID)
+    const result = await searchCustomer(formData.customerPhone, store.id)
 
     if (result.success && result.customer) {
       setFormData({
@@ -131,6 +137,11 @@ function CreateBookingContent() {
     e.preventDefault()
     if (!validateForm()) return
 
+    if (!store) {
+      toast.error("Loja não selecionada")
+      return
+    }
+
     setLoading(true)
 
     const result = await createBooking({
@@ -143,7 +154,7 @@ function CreateBookingContent() {
       time: `${formData.time}:00`,
       serviceIds: formData.serviceIds,
       notes: formData.notes || undefined,
-      storeId: STORE_ID,
+      storeId: store.id,
     })
 
     if (result.success && result.appointmentId) {
@@ -161,6 +172,29 @@ function CreateBookingContent() {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
     }
+  }
+
+  if (storeLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!store) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground mb-4">Loja não encontrada.</p>
+            <Link href="/login">
+              <Button>Fazer Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
