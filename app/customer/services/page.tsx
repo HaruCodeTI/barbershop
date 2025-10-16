@@ -45,7 +45,7 @@ interface Customer {
 export default function ServiceSelectionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, userType } = useAuth()
+  const { user, userType, signOut } = useAuth()
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
@@ -355,7 +355,10 @@ export default function ServiceSelectionPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Fazer logout completo
+                    await signOut()
+                    // Limpar estado local
                     setCustomerData(null)
                     setShowCustomerLogin(true)
                     setSelectedServices([])

@@ -1,4 +1,5 @@
 import { createClient } from "./supabase/client"
+import { isDateTimePast } from "./utils/date-timezone"
 
 export interface TimeSlot {
   time: string
@@ -198,6 +199,14 @@ export async function createBooking(
   const supabase = createClient()
 
   try {
+    // Validar se horário não está no passado
+    if (isDateTimePast(bookingData.date, bookingData.time)) {
+      return {
+        success: false,
+        error: "Não é possível agendar em horário passado. Por favor, selecione uma data e horário futuros.",
+      }
+    }
+
     let customerId = bookingData.customerId
 
     // If no customerId, search or create customer
@@ -212,6 +221,23 @@ export async function createBooking(
       if (existingCustomer) {
         customerId = existingCustomer.id
       } else {
+        // Verificar se já existe cliente com este email
+        if (bookingData.customerEmail) {
+          const { data: existingByEmail } = await supabase
+            .from("customers")
+            .select("id, name")
+            .eq("email", bookingData.customerEmail)
+            .eq("store_id", bookingData.storeId)
+            .single()
+
+          if (existingByEmail) {
+            return {
+              success: false,
+              error: `Já existe um cliente cadastrado com este email. Cliente: ${existingByEmail.name}`,
+            }
+          }
+        }
+
         // Create new customer
         const { data: newCustomer, error: customerError } = await supabase
           .from("customers")

@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client"
 import { createAppointment } from "@/lib/appointments"
 import { updateAppointment } from "@/lib/customer"
 import { useStore } from "@/lib/hooks/use-store"
+import { getCurrentDateTimeBR, isDatePast } from "@/lib/utils/date-timezone"
 
 interface Service {
   id: string
@@ -54,7 +55,7 @@ function DateTimeContent() {
   const editTime = searchParams.get("time")
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    editDate ? new Date(editDate) : new Date(),
+    editDate ? new Date(editDate) : getCurrentDateTimeBR(),
   )
   const [selectedTime, setSelectedTime] = useState<string>(editTime || "")
   const [selectedBarber, setSelectedBarber] = useState<string>(editBarberId || "")
@@ -403,7 +404,7 @@ function DateTimeContent() {
                     mode="single"
                     selected={selectedDate}
                     onSelect={handleDateSelect}
-                    disabled={(date) => date < new Date() || date.getDay() === 0}
+                    disabled={(date) => date < getCurrentDateTimeBR() || date.getDay() === 0}
                     locale={ptBR}
                     className="rounded-lg border-2 border-border/50 shadow-lg bg-card/50 backdrop-blur-sm mx-auto"
                   classNames={{

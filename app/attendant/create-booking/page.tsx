@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/contexts/auth-context"
 import type { StaffUser } from "@/lib/auth"
 import { StaffHeader } from "@/components/staff-header"
 import { LoadingPage, LoadingCard } from "@/components/loading-state"
+import { getMinAppointmentDate } from "@/lib/utils/date-timezone"
 
 function CreateBookingContent() {
   const router = useRouter()
@@ -48,6 +49,32 @@ function CreateBookingContent() {
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [barbers, setBarbers] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
+
+  const formatPhone = (value: string) => {
+    // Remove tudo exceto números
+    const numbers = value.replace(/\D/g, "")
+
+    // Limita a 11 dígitos (DDD + número)
+    if (numbers.length > 11) {
+      return formData.customerPhone
+    }
+
+    // Formata como (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    if (numbers.length <= 2) {
+      return numbers
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+    } else if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
+    }
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    handleChange("customerPhone", formatted)
+  }
 
   const loadBarbers = useCallback(async () => {
     if (!store) return
@@ -258,7 +285,7 @@ function CreateBookingContent() {
                           placeholder="(11) 98765-4321"
                           className="pl-10"
                           value={formData.customerPhone}
-                          onChange={(e) => handleChange("customerPhone", e.target.value)}
+                          onChange={handlePhoneChange}
                         />
                       </div>
                       <Button
@@ -348,7 +375,7 @@ function CreateBookingContent() {
                         className="cursor-pointer"
                         value={formData.date}
                         onChange={(e) => handleChange("date", e.target.value)}
-                        min={new Date().toISOString().split("T")[0]}
+                        min={getMinAppointmentDate()}
                       />
                       {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
                     </div>

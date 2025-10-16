@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Mail, Phone, User, Lock, Loader2, CheckCircle } from "lucide-react"
+import { ArrowLeft, Mail, Phone, User, Loader2, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { createCustomerAndAppointment, createAppointment } from "@/lib/appointments"
 import { createClient } from "@/lib/supabase/client"
@@ -38,8 +38,6 @@ function SignupContent() {
     lastName: "",
     email: "",
     phone: "",
-    password: "",
-    confirmPassword: "",
     agreeToTerms: false,
     marketingEmails: false,
   })
@@ -48,6 +46,32 @@ function SignupContent() {
   const [creating, setCreating] = useState(false)
   const [services, setServices] = useState<any[]>([])
   const [barber, setBarber] = useState<any>(null)
+
+  const formatPhone = (value: string) => {
+    // Remove tudo exceto números
+    const numbers = value.replace(/\D/g, "")
+
+    // Limita a 11 dígitos (DDD + número)
+    if (numbers.length > 11) {
+      return formData.phone
+    }
+
+    // Formata como (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    if (numbers.length <= 2) {
+      return numbers
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+    } else if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
+    }
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    handleChange("phone", formatted)
+  }
 
   // Fetch real data from Supabase
   useEffect(() => {
@@ -113,16 +137,8 @@ function SignupContent() {
     }
     if (!formData.phone.trim()) {
       newErrors.phone = "Telefone é obrigatório"
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) {
-      newErrors.phone = "Número de telefone inválido"
-    }
-    if (!formData.password) {
-      newErrors.password = "Senha é obrigatória"
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Senha deve ter pelo menos 8 caracteres"
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Senhas não coincidem"
+    } else if (!/^\d{10,11}$/.test(formData.phone.replace(/\D/g, ""))) {
+      newErrors.phone = "Número de telefone inválido (10-11 dígitos)"
     }
     if (!formData.agreeToTerms) {
       newErrors.agreeToTerms = "Você deve concordar com os termos"
@@ -148,12 +164,13 @@ function SignupContent() {
 
     try {
       const fullName = `${formData.firstName} ${formData.lastName}`
+      const cleanPhone = formData.phone.replace(/\D/g, "")
 
       const result = await createCustomerAndAppointment(
         {
           name: fullName,
           email: formData.email,
-          phone: formData.phone,
+          phone: cleanPhone,
           storeId: store.id,
         },
         {
@@ -367,44 +384,10 @@ function SignupContent() {
                         placeholder="(11) 99999-9999"
                         className="pl-10"
                         value={formData.phone}
-                        onChange={(e) => handleChange("phone", e.target.value)}
+                        onChange={handlePhoneChange}
                       />
                     </div>
                     {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          value={formData.password}
-                          onChange={(e) => handleChange("password", e.target.value)}
-                        />
-                      </div>
-                      {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="confirmPassword"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          value={formData.confirmPassword}
-                          onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                        />
-                      </div>
-                      {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
-                    </div>
                   </div>
 
                   <div className="space-y-4">

@@ -5,6 +5,7 @@ import {
   formatTimeForNotification,
   generateBookingReference,
 } from "./notifications"
+import { isDateTimePast } from "./utils/date-timezone"
 
 export interface CreateAppointmentData {
   customerId: string
@@ -31,6 +32,14 @@ export async function createAppointment(data: CreateAppointmentData) {
   const supabase = createClient()
 
   try {
+    // 0. Validar se horário não está no passado
+    if (isDateTimePast(data.date, data.time)) {
+      return {
+        success: false,
+        error: "Não é possível agendar em horário passado. Por favor, selecione uma data e horário futuros.",
+      }
+    }
+
     // 1. Get services to calculate prices
     const { data: services, error: servicesError } = await supabase
       .from("services")
@@ -176,15 +185,32 @@ export async function createCustomer(data: CreateCustomerData) {
 
   try {
     // Check if customer already exists with this phone
-    const { data: existingCustomer } = await supabase
+    const { data: existingByPhone } = await supabase
       .from("customers")
       .select("*")
       .eq("phone", data.phone)
       .eq("store_id", data.storeId)
       .single()
 
-    if (existingCustomer) {
-      return { success: true, customerId: existingCustomer.id, customer: existingCustomer }
+    if (existingByPhone) {
+      return { success: true, customerId: existingByPhone.id, customer: existingByPhone }
+    }
+
+    // Check if customer already exists with this email (if email provided)
+    if (data.email) {
+      const { data: existingByEmail } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("email", data.email)
+        .eq("store_id", data.storeId)
+        .single()
+
+      if (existingByEmail) {
+        return {
+          success: false,
+          error: `Já existe um cliente cadastrado com este email. Cliente: ${existingByEmail.name}`,
+        }
+      }
     }
 
     // Create new customer

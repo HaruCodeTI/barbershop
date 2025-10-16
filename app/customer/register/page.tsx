@@ -7,37 +7,65 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Mail, Lock, User, Phone, ArrowRight } from "lucide-react"
-import { useAuth } from "@/lib/hooks/use-auth"
+import { Loader2, Mail, User, Phone, ArrowRight } from "lucide-react"
 import { useStore } from "@/lib/hooks/use-store"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
 export default function CustomerRegisterPage() {
   const router = useRouter()
-  const { signUp } = useAuth()
   const { store, loading: storeLoading } = useStore()
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    password: "",
-    confirmPassword: "",
   })
   const [loading, setLoading] = useState(false)
+
+  const formatPhone = (value: string) => {
+    // Remove tudo exceto números
+    const numbers = value.replace(/\D/g, "")
+
+    // Limita a 11 dígitos (DDD + número)
+    if (numbers.length > 11) {
+      return formData.phone
+    }
+
+    // Formata como (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    if (numbers.length <= 2) {
+      return numbers
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+    } else if (numbers.length <= 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
+    }
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value)
+    setFormData({ ...formData, phone: formatted })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Validation
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("As senhas não coincidem")
+    if (!formData.name.trim()) {
+      toast.error("Nome é obrigatório")
       return
     }
 
-    if (formData.password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres")
+    if (!formData.phone.trim()) {
+      toast.error("Telefone é obrigatório")
+      return
+    }
+
+    const cleanPhone = formData.phone.replace(/\D/g, "")
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+      toast.error("Telefone inválido. Digite um número com 10 ou 11 dígitos.")
       return
     }
 
@@ -49,36 +77,46 @@ export default function CustomerRegisterPage() {
     setLoading(true)
 
     try {
-      // 1. Create auth user
-      const authResult = await signUp(formData.email, formData.password, {
-        name: formData.name,
-        phone: formData.phone,
-      })
+      // Criar cliente diretamente (sem auth)
+      const supabase = createClient()
+      
+      // Verificar se já existe cliente com mesmo telefone
+      const { data: existingByPhone } = await supabase
+        .from("customers")
+        .select("id, name")
+        .eq("phone", cleanPhone)
+        .eq("store_id", store.id)
+        .single()
 
-      if (!authResult.success) {
-        toast.error(authResult.error || "Erro ao criar conta")
+      if (existingByPhone) {
+        toast.error(`Já existe um cliente cadastrado com este telefone.`)
         setLoading(false)
         return
       }
 
-      // 2. Create customer profile
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      // Verificar se já existe cliente com mesmo email (se fornecido)
+      if (formData.email) {
+        const { data: existingByEmail } = await supabase
+          .from("customers")
+          .select("id, name")
+          .eq("email", formData.email)
+          .eq("store_id", store.id)
+          .single()
 
-      if (!user) {
-        toast.error("Erro ao obter informações do usuário")
-        setLoading(false)
-        return
+        if (existingByEmail) {
+          toast.error(`Já existe um cliente cadastrado com este email: ${existingByEmail.name}`)
+          setLoading(false)
+          return
+        }
       }
 
       const { error: customerError } = await supabase
         .from("customers")
         .insert({
-          auth_user_id: user.id, // Link to auth user
           store_id: store.id,
           name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
+          email: formData.email || null,
+          phone: cleanPhone,
           loyalty_points: 0,
         })
 
@@ -89,8 +127,8 @@ export default function CustomerRegisterPage() {
         return
       }
 
-      toast.success("Conta criada com sucesso! Verifique seu email.")
-      router.push("/customer/appointments")
+      toast.success("Cliente cadastrado com sucesso!")
+      router.push("/customer/login")
     } catch (error) {
       console.error("Registration error:", error)
       toast.error("Erro ao criar conta")
@@ -141,23 +179,6 @@ export default function CustomerRegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  className="pl-10"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -167,7 +188,7 @@ export default function CustomerRegisterPage() {
                   placeholder="(11) 98765-4321"
                   className="pl-10"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={handlePhoneChange}
                   required
                   autoComplete="tel"
                 />
@@ -175,37 +196,17 @@ export default function CustomerRegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="email">Email (opcional)</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
                   className="pl-10"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  autoComplete="new-password"
-                  minLength={6}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-10"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                  autoComplete="new-password"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  autoComplete="email"
                 />
               </div>
             </div>

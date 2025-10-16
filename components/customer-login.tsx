@@ -59,8 +59,8 @@ export function CustomerLogin({ onSuccess, compact = false }: CustomerLoginProps
     // Remove formatação para enviar
     const phoneNumbers = phone.replace(/\D/g, "")
 
-    if (phoneNumbers.length < 10) {
-      setError("Telefone inválido. Digite um número válido.")
+    if (phoneNumbers.length < 10 || phoneNumbers.length > 11) {
+      setError("Telefone inválido. Digite um número com 10 ou 11 dígitos.")
       setLoading(false)
       return
     }
