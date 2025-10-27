@@ -111,3 +111,176 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Glassmorphism Utilities */
+@layer utilities {
+  /* Glass Effect Base */
+  .glass {
+    background: rgba(25, 20, 33, 0.3);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(140, 82, 255, 0.15);
+    box-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.37),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-intense {
+    background: rgba(25, 20, 33, 0.2);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(140, 82, 255, 0.2);
+    box-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.45),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 60px 0 rgba(140, 82, 255, 0.1);
+  }
+
+  .glass-moderate {
+    background: rgba(25, 20, 33, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(140, 82, 255, 0.12);
+    box-shadow:
+      0 8px 32px 0 rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-subtle {
+    background: rgba(25, 20, 33, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(140, 82, 255, 0.08);
+    box-shadow:
+      0 4px 16px 0 rgba(0, 0, 0, 0.2),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.02);
+  }
+
+  /* Glass Border Glow */
+  .glass-border-glow {
+    position: relative;
+  }
+
+  .glass-border-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(140, 82, 255, 0.3),
+      rgba(140, 82, 255, 0.05),
+      rgba(140, 82, 255, 0.3)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Hover Glass Lift Effect */
+  .glass-hover-lift {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow:
+      0 16px 48px 0 rgba(0, 0, 0, 0.5),
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 80px 0 rgba(140, 82, 255, 0.15);
+  }
+
+  /* Performance Optimization for Mobile */
+  @media (max-width: 768px) {
+    .glass,
+    .glass-intense,
+    .glass-moderate {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+  }
+
+  /* Gradient Backgrounds */
+  .gradient-animated {
+    background: linear-gradient(
+      135deg,
+      #1a1625,
+      #2d1b3d,
+      #1a1625,
+      #8c52ff15
+    );
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes ripple {
+    to {
+      transform: translate(-50%, -50%) scale(20);
+      opacity: 0;
+    }
+  }
+
+  .animate-ripple {
+    animation: ripple 0.6s ease-out;
+  }
+
+  @keyframes gradient {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradient 3s ease infinite;
+  }
+
+  @keyframes scale-in {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Glow Effects */
+  .glow-primary {
+    box-shadow: 0 0 30px rgba(140, 82, 255, 0.4);
+  }
+
+  .glow-primary-intense {
+    box-shadow:
+      0 0 40px rgba(140, 82, 255, 0.5),
+      0 0 80px rgba(140, 82, 255, 0.2);
+  }
+
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    .glass-hover-lift,
+    .gradient-animated,
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

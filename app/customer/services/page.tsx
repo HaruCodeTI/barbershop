@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Scissors, Clock, ArrowLeft, Ticket, User, Star, TrendingUp, Edit } from "lucide-react"
+import { GlassBadge } from "@/components/ui/glass-badge"
+import { GlassInput } from "@/components/ui/glass-input"
+import { Scissors, Clock, ArrowLeft, Ticket, User, Star, TrendingUp, Edit, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -262,10 +265,13 @@ export default function ServiceSelectionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Scissors className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando serviços...</p>
+      <div className="min-h-screen gradient-animated flex items-center justify-center">
+        <div className="glass-intense rounded-2xl p-8 text-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+            <Scissors className="relative h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
+          </div>
+          <p className="text-white/70">Carregando serviços...</p>
         </div>
       </div>
     )
@@ -273,17 +279,19 @@ export default function ServiceSelectionPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card sticky top-0 z-10">
+      <header className="glass-subtle border-b border-primary/20 sticky top-0 z-10 transition-all duration-300">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-2 md:gap-4">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="flex-shrink-0">
+              <Button variant="ghost" size="icon" className="flex-shrink-0 glass-moderate hover:glass-intense rounded-full">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              <Scissors className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
-              <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Selecionar Serviços</h1>
+              <div className="glass-moderate rounded-full p-2 glow-primary">
+                <Scissors className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
+              </div>
+              <h1 className="text-lg md:text-xl font-bold text-white truncate">Selecionar Serviços</h1>
             </div>
           </div>
         </div>
@@ -291,70 +299,91 @@ export default function ServiceSelectionPage() {
 
       <main className="container mx-auto px-4 py-8">
         {isEditMode && (
-          <Card className="mb-8 border-blue-500/50 bg-blue-500/5">
-            <CardContent className="pt-6">
+          <GlassCard className="mb-8 border-blue-500/30">
+            <GlassCardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/20">
-                  <Edit className="h-5 w-5 text-blue-600" />
+                <div className="flex items-center justify-center w-12 h-12 rounded-full glass-moderate border border-blue-500/30">
+                  <Edit className="h-6 w-6 text-blue-400 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Editando Agendamento</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-white text-lg">Editando Agendamento</h3>
+                  <p className="text-sm text-white/70">
                     Você pode alterar os serviços, data e hora do seu agendamento
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
         )}
 
         {showCustomerLogin && !isEditMode && !isCustomerLoggedIn && (
-          <Card className="mb-8 border-primary/50">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                <CardTitle>Já é nosso cliente?</CardTitle>
-              </div>
-              <CardDescription>
-                Identifique-se para receber recomendações personalizadas e usar seus pontos de fidelidade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-2">
+          <GlassCard className="mb-8 glass-border-glow">
+            <GlassCardHeader>
+              <div className="flex items-center gap-3">
+                <div className="glass-moderate rounded-full p-3">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
                 <div className="flex-1">
-                  <Input
+                  <GlassCardTitle className="text-2xl">Já é nosso cliente?</GlassCardTitle>
+                  <GlassCardDescription className="mt-1">
+                    Identifique-se para receber recomendações personalizadas e usar seus pontos de fidelidade
+                  </GlassCardDescription>
+                </div>
+              </div>
+            </GlassCardHeader>
+            <GlassCardContent>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <GlassInput
                     placeholder="Digite seu telefone"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleCustomerLogin()}
                   />
-                  {phoneError && <p className="text-sm text-destructive mt-1">{phoneError}</p>}
+                  {phoneError && (
+                    <p className="text-sm text-red-400 mt-2 ml-1">{phoneError}</p>
+                  )}
                 </div>
-                <Button onClick={handleCustomerLogin} className="whitespace-nowrap">
+                <Button
+                  onClick={handleCustomerLogin}
+                  className="whitespace-nowrap bg-primary hover:bg-primary/90 hover:scale-105 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 h-12"
+                >
                   Identificar
                 </Button>
-                <Button variant="outline" onClick={() => setShowCustomerLogin(false)} className="whitespace-nowrap">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCustomerLogin(false)}
+                  className="whitespace-nowrap glass-moderate border-white/20 text-white hover:glass-intense hover:scale-105 transition-all duration-300 h-12"
+                >
                   Continuar como novo cliente
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </GlassCardContent>
+          </GlassCard>
         )}
 
         {customerData && (
-          <Card className="mb-8 bg-primary/5 border-primary/30">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    Bem-vindo de volta, {customerData.name.split(" ")[0]}!
-                    <Star className="h-5 w-5 text-warning fill-warning" />
-                  </CardTitle>
-                  <CardDescription>Você tem {customerData.loyalty_points} pontos de fidelidade</CardDescription>
+          <GlassCard className="mb-8 glow-primary glass-border-glow">
+            <GlassCardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="glass-moderate rounded-full p-3">
+                    <Sparkles className="h-6 w-6 text-yellow-400" />
+                  </div>
+                  <div>
+                    <GlassCardTitle className="flex items-center gap-2 text-2xl">
+                      Bem-vindo de volta, {customerData.name.split(" ")[0]}!
+                      <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 animate-pulse" />
+                    </GlassCardTitle>
+                    <GlassCardDescription className="mt-1">
+                      Você tem {customerData.loyalty_points} pontos de fidelidade
+                    </GlassCardDescription>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="glass-subtle hover:glass-moderate transition-all duration-300"
                   onClick={async () => {
                     // Fazer logout completo
                     await signOut()
@@ -368,171 +397,204 @@ export default function ServiceSelectionPage() {
                   Trocar cliente
                 </Button>
               </div>
-            </CardHeader>
+            </GlassCardHeader>
             {recommendedServices.length > 0 && (
-              <CardContent>
+              <GlassCardContent>
                 <div className="space-y-4">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-success" />
-                      <p className="text-sm font-medium">Seus serviços favoritos:</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="h-5 w-5 text-green-400" />
+                      <p className="text-sm font-semibold text-white">Seus serviços favoritos:</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {recommendedServices.map((service) => (
-                        <Badge
+                        <GlassBadge
                           key={service.id}
-                          variant="outline"
-                          className="bg-success/10 text-success border-success/30"
+                          variant="success"
                         >
+                          <Star className="h-3 w-3 fill-current" />
                           {service.name}
-                        </Badge>
+                        </GlassBadge>
                       ))}
                     </div>
                   </div>
                 </div>
-              </CardContent>
+              </GlassCardContent>
             )}
-          </Card>
+          </GlassCard>
         )}
 
-        <div className="mb-8">
-          <h2 className="mb-2 text-3xl font-bold text-foreground">Escolha Seus Serviços</h2>
-          <p className="text-muted-foreground">Selecione um ou mais serviços para seu agendamento</p>
+        <div className="mb-8 text-center md:text-left">
+          <h2 className="mb-3 text-3xl md:text-4xl font-bold text-white">Escolha Seus Serviços</h2>
+          <p className="text-white/70 text-base md:text-lg">Selecione um ou mais serviços para seu agendamento</p>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-8 flex flex-wrap gap-3 justify-center md:justify-start">
           {categories.map((cat) => {
             const count = services.filter((s) => s.category === cat.id).length
             return (
-              <Badge key={cat.id} variant="outline" className={cat.color}>
+              <GlassBadge key={cat.id} variant={cat.id === "Corte" ? "primary" : "default"} className="text-sm px-4 py-2">
                 {cat.label} ({count})
-              </Badge>
+              </GlassBadge>
             )
           })}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <div className="grid gap-4 md:grid-cols-2">
-              {services.map((service) => {
+        <div className="grid gap-6 lg:grid-cols-3 items-start">
+          <div className="lg:col-span-2 w-full">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+              {services.map((service, index) => {
                 const isSelected = selectedServices.includes(service.id)
                 const isFavorite = favoriteServices.includes(service.id)
                 return (
-                  <Card
+                  <GlassCard
                     key={service.id}
-                    className={`cursor-pointer transition-all relative ${
-                      isSelected ? "border-primary ring-2 ring-primary" : "hover:border-primary/50"
+                    className={`cursor-pointer group relative ${
+                      isSelected
+                        ? "border-primary ring-2 ring-primary glow-primary"
+                        : "glass-hover-lift"
                     }`}
                     onClick={() => toggleService(service.id)}
+                    style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     {isFavorite && (
-                      <div className="absolute top-2 right-2">
-                        <Star className="h-5 w-5 text-warning fill-warning" />
+                      <div className="absolute top-3 right-3 z-10">
+                        <div className="glass-moderate rounded-full p-1.5">
+                          <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 animate-pulse" />
+                        </div>
                       </div>
                     )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg">{service.name}</CardTitle>
+                    <GlassCardHeader>
+                      <div className="flex items-start justify-between gap-3">
+                        <GlassCardTitle className="text-xl">{service.name}</GlassCardTitle>
                         {isSelected && (
-                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center animate-scale-in">
+                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
                         )}
                       </div>
-                      <CardDescription>{service.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span>{service.duration} min</span>
+                      <GlassCardDescription className="mt-2">{service.description}</GlassCardDescription>
+                    </GlassCardHeader>
+                    <GlassCardContent>
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <div className="flex items-center gap-2 text-white/70">
+                          <div className="glass-moderate rounded-full p-2">
+                            <Clock className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium">{service.duration} min</span>
                         </div>
-                        <div className="flex items-center gap-1 font-semibold text-success">
-                          <span>R$ {Number(service.price).toFixed(2)}</span>
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs text-white/50 mb-1">Valor</span>
+                          <span className="text-2xl font-bold text-primary">
+                            R$ {Number(service.price).toFixed(2)}
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </GlassCardContent>
+                  </GlassCard>
                 )
               })}
             </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>Resumo do Agendamento</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <div className="lg:col-span-1 w-full">
+            <div className="lg:sticky lg:top-24">
+              <GlassCard className="glass-border-glow w-full">
+              <GlassCardHeader>
+                <GlassCardTitle className="text-2xl">Resumo do Agendamento</GlassCardTitle>
+              </GlassCardHeader>
+              <GlassCardContent className="space-y-6">
                 {selectedServices.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum serviço selecionado</p>
+                  <div className="text-center py-8">
+                    <div className="glass-moderate rounded-full p-4 inline-flex mb-3">
+                      <Scissors className="h-8 w-8 text-white/40" />
+                    </div>
+                    <p className="text-sm text-white/60">Nenhum serviço selecionado</p>
+                  </div>
                 ) : (
                   <>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {selectedServiceObjects.map((service) => (
-                        <div key={service.id} className="flex justify-between text-sm">
-                          <span className="text-foreground">{service.name}</span>
-                          <span className="text-success font-medium">R$ {Number(service.price).toFixed(2)}</span>
+                        <div key={service.id} className="flex justify-between text-sm glass-moderate p-3 rounded-lg">
+                          <span className="text-white font-medium">{service.name}</span>
+                          <span className="text-primary font-bold">R$ {Number(service.price).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
 
-                    <div className="border-t pt-4 space-y-2">
-                      <Label htmlFor="coupon" className="text-sm font-medium">
+                    <div className="border-t border-white/10 pt-6 space-y-3">
+                      <Label htmlFor="coupon" className="text-sm font-semibold text-white flex items-center gap-2">
+                        <Ticket className="h-4 w-4 text-primary" />
                         Cupom de Desconto
                       </Label>
                       {!appliedCoupon ? (
                         <div className="flex gap-2">
-                          <Input
+                          <GlassInput
                             id="coupon"
                             placeholder="Digite o código"
                             value={couponCode}
                             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            className="flex-1"
                           />
-                          <Button variant="outline" onClick={handleApplyCoupon} disabled={!couponCode}>
+                          <Button
+                            variant="outline"
+                            onClick={handleApplyCoupon}
+                            disabled={!couponCode}
+                            className="glass-moderate border-white/20 text-white hover:glass-intense hover:scale-105 transition-all duration-300"
+                          >
                             Aplicar
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between p-3 bg-success/10 border border-success/30 rounded-md">
+                        <div className="flex items-center justify-between p-4 glass-moderate border border-green-500/30 rounded-xl">
                           <div className="flex items-center gap-2">
-                            <Ticket className="h-4 w-4 text-success" />
-                            <span className="font-mono font-semibold text-sm">{appliedCoupon.code}</span>
+                            <Ticket className="h-5 w-5 text-green-400 animate-pulse" />
+                            <span className="font-mono font-bold text-sm text-green-400">{appliedCoupon.code}</span>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={handleRemoveCoupon}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveCoupon}
+                            className="text-white/70 hover:text-white"
+                          >
                             Remover
                           </Button>
                         </div>
                       )}
-                      {couponError && <p className="text-sm text-destructive">{couponError}</p>}
+                      {couponError && (
+                        <p className="text-sm text-red-400 ml-1">{couponError}</p>
+                      )}
                     </div>
 
-                    <div className="border-t pt-4 space-y-2">
+                    <div className="border-t border-white/10 pt-6 space-y-3">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Duração Total</span>
-                        <span className="font-medium">{totalDuration} min</span>
+                        <span className="text-white/60">Duração Total</span>
+                        <span className="font-semibold text-white">{totalDuration} min</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span className="font-medium">R$ {subtotal.toFixed(2)}</span>
+                        <span className="text-white/60">Subtotal</span>
+                        <span className="font-semibold text-white">R$ {subtotal.toFixed(2)}</span>
                       </div>
                       {discount > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-success">Desconto</span>
-                          <span className="font-medium text-success">- R$ {discount.toFixed(2)}</span>
+                          <span className="text-green-400">Desconto</span>
+                          <span className="font-semibold text-green-400">- R$ {discount.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="font-semibold">Preço Total</span>
-                        <span className="font-bold text-success text-lg">R$ {totalPrice.toFixed(2)}</span>
+                      <div className="flex justify-between pt-3 border-t border-white/10">
+                        <span className="font-bold text-white text-base">Preço Total</span>
+                        <span className="font-bold text-primary text-2xl">R$ {totalPrice.toFixed(2)}</span>
                       </div>
                     </div>
-                    <Button className="w-full" size="lg" onClick={handleContinue}>
+                    <Button
+                      className="w-full h-14 text-base bg-primary hover:bg-primary/90 hover:scale-105 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 rounded-xl font-bold"
+                      onClick={handleContinue}
+                    >
                       {isEditMode ? (
                         <>
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Edit className="h-5 w-5 mr-2" />
                           Atualizar Agendamento
                         </>
                       ) : (
@@ -541,8 +603,9 @@ export default function ServiceSelectionPage() {
                     </Button>
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </GlassCardContent>
+            </GlassCard>
+            </div>
           </div>
         </div>
       </main>

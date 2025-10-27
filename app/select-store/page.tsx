@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
-import { Store, MapPin, Phone, Mail, Loader2 } from "lucide-react"
+import { Store, MapPin, Phone, Mail, Loader2, Building2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useStore } from "@/lib/hooks/use-store"
 
@@ -63,83 +63,109 @@ export default function SelectStorePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-background gradient-animated flex items-center justify-center">
+        <div className="glass-intense rounded-2xl p-8 text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Carregando lojas...</p>
+          <p className="text-white/70">Carregando lojas...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="flex justify-center mb-4">
-              <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10">
-                <Store className="h-8 w-8 text-primary" />
+    <div className="min-h-screen bg-background gradient-animated">
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12 md:mb-16">
+            <div className="flex justify-center mb-6">
+              <div className="glass-intense rounded-full p-6 glow-primary-intense">
+                <Building2 className="h-12 w-12 text-primary" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Selecione uma Loja</h1>
-            <p className="text-muted-foreground">
-              Escolha a unidade GoBarber que deseja acessar
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+              Selecione uma Unidade
+            </h1>
+            <p className="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
+              Escolha a unidade CortaAí mais próxima de você
             </p>
           </div>
 
+          {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-md">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="mb-8 max-w-2xl mx-auto">
+              <div className="glass-intense rounded-xl p-4 border border-red-500/30">
+                <p className="text-sm text-red-400 text-center">{error}</p>
+              </div>
             </div>
           )}
 
+          {/* Store Grid */}
           {stores.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Store className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Nenhuma loja encontrada</p>
-              </CardContent>
-            </Card>
+            <div className="max-w-md mx-auto">
+              <GlassCard>
+                <GlassCardContent className="py-16 text-center">
+                  <div className="glass-moderate rounded-full p-4 inline-flex mb-4">
+                    <Store className="h-12 w-12 text-primary" />
+                  </div>
+                  <p className="text-white/70 text-lg">Nenhuma loja encontrada</p>
+                </GlassCardContent>
+              </GlassCard>
+            </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {stores.map((store) => (
-                <Card
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {stores.map((store, index) => (
+                <GlassCard
                   key={store.id}
-                  className="hover:border-primary transition-colors cursor-pointer"
+                  className="group cursor-pointer transition-all duration-300"
                   onClick={() => handleSelectStore(store.slug)}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="h-5 w-5" />
-                      {store.name}
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      slug: {store.slug}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
+                  <GlassCardHeader>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <GlassCardTitle className="text-xl md:text-2xl flex items-center gap-2">
+                        <Store className="h-5 w-5 text-primary flex-shrink-0" />
+                        <span className="break-words">{store.name}</span>
+                      </GlassCardTitle>
+                    </div>
+                    <GlassCardDescription className="text-xs font-mono">
+                      {store.slug}
+                    </GlassCardDescription>
+                  </GlassCardHeader>
+
+                  <GlassCardContent className="space-y-3">
+                    {/* Address */}
                     {store.address && (
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span>{store.address}</span>
+                      <div className="flex items-start gap-3 text-white/70 p-3 glass-moderate rounded-lg">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                        <span className="text-sm leading-relaxed">{store.address}</span>
                       </div>
                     )}
+
+                    {/* Phone */}
                     {store.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <span>{store.phone}</span>
+                      <div className="flex items-center gap-3 text-white/70 p-3 glass-moderate rounded-lg">
+                        <Phone className="h-4 w-4 flex-shrink-0 text-primary" />
+                        <span className="text-sm">{store.phone}</span>
                       </div>
                     )}
+
+                    {/* Email */}
                     {store.email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        <span>{store.email}</span>
+                      <div className="flex items-center gap-3 text-white/70 p-3 glass-moderate rounded-lg">
+                        <Mail className="h-4 w-4 flex-shrink-0 text-primary" />
+                        <span className="text-sm truncate">{store.email}</span>
                       </div>
                     )}
+
+                    {/* Select Button */}
                     <Button
-                      className="w-full mt-4"
+                      className="w-full mt-4 bg-primary hover:bg-primary/90 hover:scale-105 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 text-base py-6 rounded-xl font-semibold"
                       disabled={selecting === store.slug}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleSelectStore(store.slug)
+                      }}
                     >
                       {selecting === store.slug ? (
                         <>
@@ -147,11 +173,11 @@ export default function SelectStorePage() {
                           Selecionando...
                         </>
                       ) : (
-                        "Selecionar Loja"
+                        "Selecionar Esta Unidade"
                       )}
                     </Button>
-                  </CardContent>
-                </Card>
+                  </GlassCardContent>
+                </GlassCard>
               ))}
             </div>
           )}

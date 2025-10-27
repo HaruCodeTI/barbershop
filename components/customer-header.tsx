@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { GlassButton } from "@/components/ui/glass-button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Award, Calendar, LogOut, Scissors } from "lucide-react"
+import { Award, Calendar, LogOut, Scissors, User } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/contexts/auth-context"
@@ -33,7 +34,10 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
     return (
       <div className="flex items-center gap-4">
         <Link href="/customer/services">
-          <Button size="sm">Agendar</Button>
+          <GlassButton size="sm" variant="primary" className="group">
+            <Scissors className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
+            Agendar
+          </GlassButton>
         </Link>
       </div>
     )
@@ -44,14 +48,16 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
     return (
       <div className="flex items-center gap-2 md:gap-4">
         <Link href="/login">
-          <Button variant="ghost" size="sm" className="text-xs md:text-sm whitespace-nowrap">
+          <GlassButton variant="ghost" size="sm" className="text-xs md:text-sm whitespace-nowrap group">
+            <User className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform" />
             Login Staff
-          </Button>
+          </GlassButton>
         </Link>
         <Link href="/customer/services">
-          <Button size="sm" className="text-xs md:text-sm whitespace-nowrap">
+          <GlassButton size="sm" variant="primary" className="text-xs md:text-sm whitespace-nowrap group">
+            <Scissors className="h-4 w-4 mr-1 group-hover:rotate-12 transition-transform" />
             Agendar
-          </Button>
+          </GlassButton>
         </Link>
       </div>
     )
@@ -69,26 +75,26 @@ export function CustomerHeader({ customerId: propCustomerId }: CustomerHeaderPro
   return (
     <div className="flex items-center gap-2 md:gap-4">
       <Link href="/customer/services">
-        <Button size="sm" className="text-xs md:text-sm whitespace-nowrap">
-          <Scissors className="h-4 w-4 mr-1" />
+        <GlassButton size="sm" variant="primary" className="text-xs md:text-sm whitespace-nowrap group">
+          <Scissors className="h-4 w-4 mr-1 group-hover:rotate-12 transition-transform" />
           Agendar
-        </Button>
+        </GlassButton>
       </Link>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="flex items-center gap-2 md:gap-3 px-2 md:px-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">{initials}</AvatarFallback>
+          <GlassButton variant="ghost" className="flex items-center gap-2 md:gap-3 px-2 md:px-3">
+            <Avatar className="h-8 w-8 ring-2 ring-primary/30 hover:ring-primary/50 transition-all">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initials}</AvatarFallback>
             </Avatar>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-medium">{firstName}</p>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Award className="h-3 w-3" />
+              <p className="text-sm font-medium text-white">{firstName}</p>
+              <p className="text-xs text-white/60 flex items-center gap-1">
+                <Award className="h-3 w-3 text-primary" />
                 {customer.loyalty_points} pontos
               </p>
             </div>
-          </Button>
+          </GlassButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>

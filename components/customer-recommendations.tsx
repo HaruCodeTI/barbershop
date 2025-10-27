@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { GlassCard, GlassCardContent, GlassCardDescription, GlassCardHeader, GlassCardTitle } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
+import { GlassButton } from "@/components/ui/glass-button"
 import { Badge } from "@/components/ui/badge"
+import { GlassBadge } from "@/components/ui/glass-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Sparkles, User, Clock, TrendingUp, Loader2, ChevronRight } from "lucide-react"
+import { Sparkles, User, Clock, TrendingUp, Loader2, ChevronRight, Star } from "lucide-react"
 import Link from "next/link"
 import { getCustomerRecommendations, type Recommendation } from "@/lib/customer"
 
@@ -48,26 +51,35 @@ export function CustomerRecommendations({
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="pt-12 pb-12">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregando recomendações...</p>
+      <GlassCard className="animate-scale-in" variant="moderate">
+        <GlassCardContent className="pt-12 pb-12">
+          <div className="text-center space-y-4">
+            <div className="relative inline-block">
+              <Loader2 className="h-10 w-10 text-primary animate-spin glow-primary" />
+              <Sparkles className="h-4 w-4 text-primary absolute -top-1 -right-1 animate-pulse" />
+            </div>
+            <p className="text-white/70">Carregando recomendações personalizadas...</p>
           </div>
-        </CardContent>
-      </Card>
+        </GlassCardContent>
+      </GlassCard>
     )
   }
 
   if (barbers.length === 0 && services.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-12 pb-12 text-center">
-          <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">Ainda não temos recomendações</h3>
-          <p className="text-muted-foreground">Faça seu primeiro agendamento para receber sugestões personalizadas!</p>
-        </CardContent>
-      </Card>
+      <GlassCard className="animate-scale-in glass-border-glow" variant="moderate">
+        <GlassCardContent className="pt-12 pb-12 text-center space-y-4">
+          <div className="relative inline-block">
+            <div className="h-16 w-16 rounded-full glass-moderate flex items-center justify-center mx-auto border-2 border-primary/30">
+              <Sparkles className="h-10 w-10 text-primary glow-primary animate-pulse" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-white">Ainda não temos recomendações</h3>
+            <p className="text-white/70">Faça seu primeiro agendamento para receber sugestões personalizadas!</p>
+          </div>
+        </GlassCardContent>
+      </GlassCard>
     )
   }
 
@@ -85,42 +97,46 @@ export function CustomerRecommendations({
 
   if (variant === "compact") {
     return (
-      <Card>
+      <GlassCard className="animate-scale-in" variant="moderate">
         {showTitle && (
-          <CardHeader>
+          <GlassCardHeader>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <CardTitle>Recomendado para Você</CardTitle>
+              <Sparkles className="h-5 w-5 text-primary glow-primary animate-pulse" />
+              <GlassCardTitle>Recomendado para Você</GlassCardTitle>
             </div>
-            <CardDescription>
+            <GlassCardDescription className="text-white/60">
               {hasHistory ? "Baseado no seu histórico" : "Serviços e barbeiros populares"}
-            </CardDescription>
-          </CardHeader>
+            </GlassCardDescription>
+          </GlassCardHeader>
         )}
-        <CardContent className="space-y-4">
+        <GlassCardContent className="space-y-4">
           {barbers.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold mb-3 text-foreground">Barbeiros</h4>
+              <h4 className="text-sm font-semibold mb-3 text-white flex items-center gap-2">
+                <User className="h-4 w-4 text-primary" />
+                Barbeiros
+              </h4>
               <div className="space-y-2">
-                {barbers.slice(0, 2).map((barber) => (
+                {barbers.slice(0, 2).map((barber, index) => (
                   <div
                     key={barber.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-lg glass-subtle hover:glass-moderate border border-white/10 hover:border-primary/30 transition-all duration-300 cursor-pointer group"
                     onClick={() => onBarberSelect?.(barber.id)}
+                    style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all">
                         <AvatarImage src={barber.avatar_url || undefined} alt={barber.name} />
-                        <AvatarFallback>
-                          <User className="h-5 w-5" />
+                        <AvatarFallback className="bg-primary/10">
+                          <User className="h-5 w-5 text-primary" />
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">{barber.name}</p>
-                        <p className="text-xs text-muted-foreground">{barber.reason}</p>
+                        <p className="font-medium text-sm text-white">{barber.name}</p>
+                        <p className="text-xs text-white/60">{barber.reason}</p>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 text-primary group-hover:translate-x-1 transition-transform" />
                   </div>
                 ))}
               </div>
@@ -129,21 +145,25 @@ export function CustomerRecommendations({
 
           {services.length > 0 && (
             <div>
-              <h4 className="text-sm font-semibold mb-3 text-foreground">Serviços</h4>
+              <h4 className="text-sm font-semibold mb-3 text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Serviços
+              </h4>
               <div className="space-y-2">
-                {services.slice(0, 2).map((service) => (
+                {services.slice(0, 2).map((service, index) => (
                   <div
                     key={service.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-lg glass-subtle hover:glass-moderate border border-white/10 hover:border-primary/30 transition-all duration-300 cursor-pointer group"
                     onClick={() => onServiceSelect?.(service.id)}
+                    style={{ animationDelay: `${(barbers.length + index) * 0.05}s` }}
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{service.name}</p>
-                      <p className="text-xs text-muted-foreground">{service.reason}</p>
+                      <p className="font-medium text-sm text-white">{service.name}</p>
+                      <p className="text-xs text-white/60">{service.reason}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm text-primary">R$ {service.price?.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">{service.duration} min</p>
+                      <p className="font-semibold text-sm text-primary">{service.price?.toFixed(2)}</p>
+                      <p className="text-xs text-white/60">{service.duration} min</p>
                     </div>
                   </div>
                 ))}
@@ -152,12 +172,13 @@ export function CustomerRecommendations({
           )}
 
           <Link href="/customer/services">
-            <Button className="w-full" variant="outline">
+            <GlassButton className="w-full group" variant="glass-intense">
+              <Sparkles className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
               Ver Todos os Serviços
-            </Button>
+            </GlassButton>
           </Link>
-        </CardContent>
-      </Card>
+        </GlassCardContent>
+      </GlassCard>
     )
   }
 
@@ -165,11 +186,14 @@ export function CustomerRecommendations({
   return (
     <div className="space-y-6">
       {showTitle && (
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-6 w-6 text-primary" />
+        <div className="flex items-center gap-3 animate-scale-in">
+          <div className="relative">
+            <Sparkles className="h-8 w-8 text-primary glow-primary animate-pulse" />
+            <Star className="h-3 w-3 text-primary absolute -top-1 -right-1 animate-pulse" />
+          </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Recomendado para Você</h2>
-            <p className="text-muted-foreground">
+            <h2 className="text-3xl font-bold text-white">Recomendado para Você</h2>
+            <p className="text-white/70">
               {hasHistory ? "Sugestões baseadas no seu histórico" : "Barbeiros e serviços populares"}
             </p>
           </div>
@@ -178,35 +202,48 @@ export function CustomerRecommendations({
 
       {/* Barbers Section */}
       {barbers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Barbeiros Recomendados</CardTitle>
-            <CardDescription>Profissionais que combinam com suas preferências</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <GlassCard className="animate-scale-in" variant="moderate" style={{ animationDelay: '0.1s' }}>
+          <GlassCardHeader>
+            <GlassCardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary glow-primary" />
+              Barbeiros Recomendados
+            </GlassCardTitle>
+            <GlassCardDescription className="text-white/60">
+              Profissionais que combinam com suas preferências
+            </GlassCardDescription>
+          </GlassCardHeader>
+          <GlassCardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {barbers.map((barber) => (
-                <Card key={barber.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
+              {barbers.map((barber, index) => (
+                <GlassCard
+                  key={barber.id}
+                  className="glass-hover-lift group animate-scale-in"
+                  variant="subtle"
+                  style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+                >
+                  <GlassCardContent className="pt-6">
                     <div className="text-center space-y-4">
-                      <Avatar className="h-20 w-20 mx-auto">
+                      <Avatar className="h-20 w-20 mx-auto ring-4 ring-primary/20 group-hover:ring-primary/50 transition-all">
                         <AvatarImage src={barber.avatar_url || undefined} alt={barber.name} />
-                        <AvatarFallback className="text-2xl">
-                          <User className="h-10 w-10" />
+                        <AvatarFallback className="text-2xl bg-primary/10">
+                          <User className="h-10 w-10 text-primary" />
                         </AvatarFallback>
                       </Avatar>
 
                       <div>
-                        <h3 className="font-semibold text-lg">{barber.name}</h3>
+                        <h3 className="font-semibold text-lg text-white">{barber.name}</h3>
                         <div className="flex items-center justify-center gap-2 mt-2">
-                          <Badge variant="outline" className={getScoreBadge(barber.score)}>
+                          <GlassBadge
+                            variant={barber.score >= 80 ? "success" : barber.score >= 60 ? "primary" : "warning"}
+                            className="animate-pulse"
+                          >
                             <TrendingUp className="h-3 w-3 mr-1" />
                             {barber.score}% compatível
-                          </Badge>
+                          </GlassBadge>
                         </div>
                       </div>
 
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-white/70">
                         <p className="flex items-center justify-center gap-1">
                           {hasHistory && barber.usageCount > 0 ? (
                             <>
@@ -219,72 +256,89 @@ export function CustomerRecommendations({
                         </p>
                       </div>
 
-                      <Button
-                        className="w-full"
+                      <GlassButton
+                        className="w-full group/btn"
                         onClick={() => onBarberSelect?.(barber.id)}
-                        variant={barber.score >= 80 ? "default" : "outline"}
+                        variant={barber.score >= 80 ? "primary" : "glass-intense"}
                       >
+                        <User className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
                         Agendar com {barber.name.split(" ")[0]}
-                      </Button>
+                      </GlassButton>
                     </div>
-                  </CardContent>
-                </Card>
+                  </GlassCardContent>
+                </GlassCard>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </GlassCardContent>
+        </GlassCard>
       )}
 
       {/* Services Section */}
       {services.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Serviços Recomendados</CardTitle>
-            <CardDescription>Serviços que você já conhece e confia</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <GlassCard className="animate-scale-in" variant="moderate" style={{ animationDelay: '0.2s' }}>
+          <GlassCardHeader>
+            <GlassCardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary glow-primary" />
+              Serviços Recomendados
+            </GlassCardTitle>
+            <GlassCardDescription className="text-white/60">
+              Serviços que você já conhece e confia
+            </GlassCardDescription>
+          </GlassCardHeader>
+          <GlassCardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {services.map((service) => (
-                <Card key={service.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
+              {services.map((service, index) => (
+                <GlassCard
+                  key={service.id}
+                  className="glass-hover-lift group animate-scale-in"
+                  variant="subtle"
+                  style={{ animationDelay: `${0.3 + index * 0.05}s` }}
+                >
+                  <GlassCardContent className="pt-6">
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-lg">{service.name}</h3>
-                          <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
+                          <h3 className="font-semibold text-lg text-white">{service.name}</h3>
+                          <div className="flex items-center gap-2 mt-2 text-sm text-white/70">
+                            <Clock className="h-4 w-4 text-primary" />
                             <span>{service.duration} minutos</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">R$ {service.price?.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-primary glow-primary">
+                            R$ {service.price?.toFixed(2)}
+                          </p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline" className={getScoreBadge(service.score)}>
+                        <GlassBadge
+                          variant={service.score >= 80 ? "success" : service.score >= 60 ? "primary" : "warning"}
+                          className="animate-pulse"
+                        >
                           <TrendingUp className="h-3 w-3 mr-1" />
                           {service.score}% compatível
-                        </Badge>
+                        </GlassBadge>
                         {hasHistory && service.usageCount > 0 && (
-                          <span className="text-xs text-muted-foreground">{service.reason}</span>
+                          <span className="text-xs text-white/60">{service.reason}</span>
                         )}
                       </div>
 
-                      <Button
-                        className="w-full"
+                      <GlassButton
+                        className="w-full group/btn"
                         onClick={() => onServiceSelect?.(service.id)}
-                        variant={service.score >= 80 ? "default" : "outline"}
+                        variant={service.score >= 80 ? "primary" : "glass-intense"}
                       >
+                        <Sparkles className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform" />
                         Agendar Este Serviço
-                      </Button>
+                      </GlassButton>
                     </div>
-                  </CardContent>
-                </Card>
+                  </GlassCardContent>
+                </GlassCard>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </GlassCardContent>
+        </GlassCard>
       )}
     </div>
   )
